@@ -34,7 +34,7 @@ export function AuthLandingPage() {
 								<img
 									src={Images.Logo}
 									alt="Logo"
-									className="h-full w-full object-contain"
+									className="h-9 w-9 object-contain"
 									width={36}
 									height={36}
 								/>
