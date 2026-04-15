@@ -1,0 +1,85 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    --color-bg: 246 248 251;
+    --color-sidebar: 242 245 248;
+    --color-surface: 255 255 255;
+    --color-input: 255 255 255;
+    --color-input-hover: 246 249 252;
+    --color-code: 244 248 251;
+    --color-border: 221 228 236;
+    --color-border-muted: 204 214 224;
+    --color-text: 18 25 38;
+    --color-text-muted: 94 108 128;
+  }
+
+  .dark {
+    --color-bg: 9 14 24;
+    --color-sidebar: 11 18 30;
+    --color-surface: 18 27 42;
+    --color-input: 20 31 49;
+    --color-input-hover: 27 39 60;
+    --color-code: 13 22 36;
+    --color-border: 42 58 84;
+    --color-border-muted: 60 78 106;
+    --color-text: 235 242 251;
+    --color-text-muted: 147 166 192;
+  }
+
+  /* Slim, theme-aware scrollbars (Firefox + WebKit) */
+  * {
+    scrollbar-width: thin;
+    scrollbar-color: rgb(var(--color-border-muted) / 0.75) transparent;
+  }
+
+  *::-webkit-scrollbar {
+    width: 10px;
+    height: 10px;
+  }
+
+  *::-webkit-scrollbar-track {
+    background: transparent;
+  }
+
+  *::-webkit-scrollbar-thumb {
+    border-radius: 9999px;
+    border: 3px solid transparent;
+    background-clip: content-box;
+    background-color: rgb(var(--color-border-muted) / 0.55);
+  }
+
+  *::-webkit-scrollbar-thumb:hover {
+    background-color: rgb(var(--color-text-muted) / 0.5);
+  }
+
+  *::-webkit-scrollbar-thumb:active {
+    background-color: rgb(var(--color-text-muted) / 0.65);
+  }
+
+  *::-webkit-scrollbar-corner {
+    background: transparent;
+  }
+}
+
+html {
+  scroll-behavior: smooth;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  height: 100%;
+}
+
+body {
+  @apply min-h-screen bg-th-bg font-sans text-th-text antialiased;
+  height: 100%;
+  background-image:
+    radial-gradient(1100px circle at 12% -10%, rgb(14 165 233 / 0.12), transparent 50%),
+    radial-gradient(1000px circle at 92% 10%, rgb(20 184 166 / 0.1), transparent 55%);
+  background-attachment: fixed;
+}
+
+#root {
+  height: 100%;
+}
