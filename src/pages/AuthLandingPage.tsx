@@ -31,13 +31,9 @@ export function AuthLandingPage() {
 					<div className="mx-auto w-full max-w-6xl px-4 pt-4 sm:px-6 sm:pt-6">
 						<div className="flex h-16 items-center justify-between rounded-2xl border border-violet-300/20 bg-white/5 px-4 shadow-[0_8px_28px_rgba(76,29,149,0.35)] backdrop-blur-xl sm:px-5">
 							<div className="flex items-center gap-3">
-								<img
-									src={Images.Logo}
-									alt="Logo"
-									className="h-9 w-9 object-contain"
-									width={36}
-									height={36}
-								/>
+								<div class="w-8 h-8 rounded-lg bg-linear-to-br from-violet-600 to-violet-500 flex items-center justify-center shadow-lg shadow-violet-500/20 group-hover:shadow-violet-500/40 transition-shadow duration-300">
+                  <img class="w-6" src={Images.Logo} style="filter: blur(0px);">
+                </div>
 								<div className="leading-tight">
 									<p className="text-xs font-semibold uppercase tracking-[0.16em] text-cyan-300">
 										TradeGPT
