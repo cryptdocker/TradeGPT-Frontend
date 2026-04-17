@@ -1,5 +1,22 @@
 import { useCallback, useEffect, useRef, useState, type ReactNode } from "react";
-import { useNavigate, useParams } from "react-router-dom";
+import { useNavigate } from "react-router-dom";
+import {
+  FiArrowLeft,
+  FiCheck,
+  FiAlertTriangle,
+  FiLock,
+  FiDownload,
+  FiTrash2,
+  FiLogOut,
+  FiStar,
+  FiClock,
+  FiZap,
+  FiSun,
+  FiMoon,
+  FiX,
+  FiSave,
+  FiEdit3,
+} from "react-icons/fi";
 import { useAuth } from "@/context/AuthContext";
 import { useTheme, type Theme } from "@/context/ThemeContext";
 import { PaymentCheckout } from "@/components/PaymentCheckout";
@@ -11,8 +28,11 @@ import {
 } from "@/lib/api";
 import { buildChatHistoryExportText, deleteAllConversations } from "@/lib/chatApi";
 import { evaluatePasswordStrength, meetsMinimumPassword } from "@/lib/passwordStrength";
+import { DEFAULT_PRO_PRICE_USD, FREE_TRIAL_DAYS } from "@/config/app";
 
-type SectionId = "general" | "subscription" | "notifications" | "data" | "account";
+export type SettingsSectionId = "general" | "subscription" | "notifications" | "data" | "account";
+
+type SectionId = SettingsSectionId;
 
 const SECTIONS: { id: SectionId; label: string }[] = [
   { id: "general", label: "General" },
@@ -23,6 +43,10 @@ const SECTIONS: { id: SectionId; label: string }[] = [
 ];
 
 const VALID_SECTIONS = new Set<string>(SECTIONS.map((s) => s.id));
+
+export function isValidSettingsSection(id: string | undefined): id is SettingsSectionId {
+  return id !== undefined && VALID_SECTIONS.has(id);
+}
 
 function Toggle({
   checked,
@@ -45,7 +69,7 @@ function Toggle({
       onClick={() => !disabled && onChange(!checked)}
       className={`relative inline-flex h-6 w-11 shrink-0 rounded-full transition-colors duration-200 ${
         disabled ? "cursor-not-allowed opacity-50" : "cursor-pointer"
-      } ${checked ? "bg-cyan-600" : "bg-th-border-muted"}`}
+      } ${checked ? "bg-gradient-to-r from-teal-500 to-emerald-500" : "bg-th-border-muted"}`}
     >
       <span
         className={`pointer-events-none absolute top-0.5 left-0.5 h-5 w-5 rounded-full bg-white shadow-md ring-0 transition-transform duration-200 ${
@@ -76,17 +100,22 @@ function SettingsRow({
   );
 }
 
-const THEME_OPTIONS: { value: Theme; label: string }[] = [
-  { value: "dark", label: "Dark" },
-  { value: "light", label: "Light" },
+const THEME_OPTIONS: { value: Theme; label: string; icon: ReactNode }[] = [
+  { value: "dark", label: "Dark", icon: <FiMoon aria-hidden className="h-3.5 w-3.5" /> },
+  { value: "light", label: "Light", icon: <FiSun aria-hidden className="h-3.5 w-3.5" /> },
 ];
 
-export function SettingsPage() {
-  const { section: urlSection } = useParams<{ section?: string }>();
+type SettingsViewProps = {
+  variant: "page" | "modal";
+  section: SettingsSectionId;
+  onSectionChange: (id: SettingsSectionId) => void;
+  onClose: () => void;
+};
+
+export function SettingsView({ variant, section, onSectionChange, onClose }: SettingsViewProps) {
   const navigate = useNavigate();
   const { user, token, subscription, refreshSubscription, logout } = useAuth();
   const { theme, setTheme } = useTheme();
-  const section: SectionId = urlSection && VALID_SECTIONS.has(urlSection) ? (urlSection as SectionId) : "general";
   const [showCheckout, setShowCheckout] = useState(false);
 
   const [notifPrefs, setNotifPrefs] = useState<NotificationPrefs | null>(null);
@@ -122,7 +151,7 @@ export function SettingsPage() {
     [token],
   );
 
-  const goBack = useCallback(() => navigate("/chat"), [navigate]);
+  const goBack = useCallback(() => onClose(), [onClose]);
 
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
@@ -242,20 +271,33 @@ export function SettingsPage() {
   const userEmail = user?.email ?? "";
 
   return (
-    <div className="flex h-[100dvh] w-full flex-col bg-th-bg text-th-text">
+    <div
+      className={
+        variant === "page"
+          ? "flex h-[100dvh] w-full flex-col bg-th-bg text-th-text"
+          : "flex min-h-0 w-full flex-1 flex-col bg-th-bg text-th-text"
+      }
+    >
       <header className="flex h-14 shrink-0 items-center gap-3 border-b border-th-border px-3 md:px-4">
         <button
           type="button"
           onClick={goBack}
-          className="rounded-lg p-2 text-th-text hover:bg-th-surface"
-          aria-label="Back to chat"
+          className="inline-flex items-center gap-1.5 rounded-lg p-2 text-th-text hover:bg-th-surface"
+          aria-label={variant === "modal" ? "Close settings" : "Back to chat"}
+          title={variant === "modal" ? "Close" : "Back to chat"}
         >
-          <BackIcon />
+          {variant === "modal" ? (
+            <FiX aria-hidden className="h-5 w-5" />
+          ) : (
+            <FiArrowLeft aria-hidden className="h-5 w-5" />
+          )}
         </button>
-        <h1 className="text-lg font-semibold">Settings</h1>
+        <h1 id={variant === "modal" ? "settings-modal-title" : undefined} className="text-lg font-semibold">
+          Settings
+        </h1>
       </header>
 
-      <div className="flex min-h-0 flex-1 flex-col md:flex-row">
+      <div className="flex min-h-0 flex-1 flex-col overflow-hidden md:flex-row">
         <nav
           className="flex shrink-0 gap-0.5 overflow-x-auto border-b border-th-border px-2 py-2 md:w-56 md:flex-col md:border-b-0 md:border-r md:px-2 md:py-4"
           aria-label="Settings sections"
@@ -264,11 +306,11 @@ export function SettingsPage() {
             <button
               key={s.id}
               type="button"
-              onClick={() => navigate(`/settings/${s.id}`, { replace: true })}
+              onClick={() => onSectionChange(s.id)}
               className={`whitespace-nowrap rounded-lg px-3 py-2.5 text-left text-sm transition-colors md:w-full ${
                 section === s.id
-                  ? "bg-th-surface text-th-text"
-                  : "text-th-text-muted hover:bg-th-surface/60 hover:text-th-text"
+                  ? "bg-teal-500/15 text-th-text ring-1 ring-teal-500/25 dark:bg-teal-400/15 dark:ring-teal-400/25"
+                  : "text-th-text-muted hover:bg-th-input hover:text-th-text"
               }`}
             >
               {s.label}
@@ -295,12 +337,13 @@ export function SettingsPage() {
                           key={opt.value}
                           type="button"
                           onClick={() => setTheme(opt.value)}
-                          className={`rounded-lg border px-3 py-1.5 text-xs font-medium transition-colors ${
+                          className={`inline-flex items-center gap-1.5 rounded-lg border px-3 py-1.5 text-xs font-medium transition-colors ${
                             theme === opt.value
-                              ? "border-cyan-600 bg-cyan-500/10 text-th-text"
-                              : "border-th-border text-th-text-muted hover:border-th-text-muted hover:text-th-text"
+                              ? "border-teal-500 bg-teal-500/10 text-teal-700 dark:text-teal-300"
+                              : "border-th-border text-th-text-muted hover:border-teal-500/50 hover:text-th-text"
                           }`}
                         >
+                          {opt.icon}
                           {opt.label}
                         </button>
                       ))}
@@ -330,21 +373,16 @@ export function SettingsPage() {
                           <div
                             className={`flex h-10 w-10 items-center justify-center rounded-full ${
                               subscription.plan === "pro"
-                                ? "bg-gradient-to-br from-cyan-500 to-sky-600"
+                                ? "bg-gradient-to-br from-teal-500 via-emerald-500 to-cyan-500"
                                 : subscription.trialActive
-                                  ? "bg-gradient-to-br from-cyan-500 to-teal-600"
+                                  ? "bg-gradient-to-br from-teal-500 to-emerald-600"
                                   : "bg-th-border-muted"
                             }`}
                           >
                             {subscription.plan === "pro" ? (
-                              <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor" className="text-white">
-                                <path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z" />
-                              </svg>
+                              <FiStar aria-hidden className="h-5 w-5 text-white" />
                             ) : (
-                              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="text-white">
-                                <circle cx="12" cy="12" r="10" />
-                                <path d="M12 6v6l4 2" strokeLinecap="round" />
-                              </svg>
+                              <FiClock aria-hidden className="h-5 w-5 text-white" />
                             )}
                           </div>
                           <div>
@@ -370,9 +408,14 @@ export function SettingsPage() {
                                 className={`h-full rounded-full transition-all ${
                                   subscription.trialDaysLeft <= 2
                                     ? "bg-gradient-to-r from-amber-500 to-orange-500"
-                                    : "bg-gradient-to-r from-cyan-500 to-teal-500"
+                                    : "bg-gradient-to-r from-teal-500 to-emerald-500"
                                 }`}
-                                style={{ width: `${Math.max(5, ((7 - subscription.trialDaysLeft) / 7) * 100)}%` }}
+                                style={{
+                                  width: `${Math.max(
+                                    5,
+                                    ((FREE_TRIAL_DAYS - subscription.trialDaysLeft) / FREE_TRIAL_DAYS) * 100,
+                                  )}%`,
+                                }}
                               />
                             </div>
                             <p className="mt-2 text-xs text-th-text-muted">
@@ -389,11 +432,15 @@ export function SettingsPage() {
                       </div>
 
                       {subscription.plan !== "pro" && !showCheckout && (
-                        <div className="mt-6 rounded-xl border border-cyan-500/25 bg-cyan-500/5 p-5">
+                        <div className="mt-6 rounded-xl border border-teal-500/25 bg-gradient-to-br from-teal-500/10 via-emerald-500/5 to-cyan-500/5 p-5">
                           <div className="flex items-baseline justify-between">
-                            <h3 className="text-base font-semibold text-th-text">Upgrade to Pro</h3>
-                            <p className="text-lg font-bold text-cyan-500">
-                              14.99 <span className="text-xs font-normal text-th-text-muted">USD/mo</span>
+                            <h3 className="inline-flex items-center gap-2 text-base font-semibold text-th-text">
+                              <FiStar aria-hidden className="h-4 w-4 text-teal-500" />
+                              Upgrade to Pro
+                            </h3>
+                            <p className="text-lg font-bold text-teal-600 dark:text-teal-300">
+                              {DEFAULT_PRO_PRICE_USD}{" "}
+                              <span className="text-xs font-normal text-th-text-muted">USD/mo</span>
                             </p>
                           </div>
                           <p className="mt-1 text-sm text-th-text-muted">
@@ -401,28 +448,29 @@ export function SettingsPage() {
                           </p>
                           <ul className="mt-3 space-y-1.5 text-sm text-th-text">
                             <li className="flex items-center gap-2">
-                              <CheckIcon />
+                              <CheckBullet />
                               Unlimited conversations
                             </li>
                             <li className="flex items-center gap-2">
-                              <CheckIcon />
+                              <CheckBullet />
                               All 7 trading modes
                             </li>
                             <li className="flex items-center gap-2">
-                              <CheckIcon />
+                              <CheckBullet />
                               Priority response speed
                             </li>
                             <li className="flex items-center gap-2">
-                              <CheckIcon />
+                              <CheckBullet />
                               Advanced market analysis
                             </li>
                           </ul>
                           <button
                             type="button"
                             onClick={() => setShowCheckout(true)}
-                            className="mt-4 w-full rounded-lg bg-slate-900 px-4 py-2.5 text-sm font-medium text-white transition-colors hover:bg-slate-800"
+                            className="mt-4 inline-flex w-full items-center justify-center gap-2 rounded-lg bg-gradient-to-r from-teal-600 via-emerald-600 to-cyan-600 px-4 py-2.5 text-sm font-semibold text-white shadow-teal-glow transition-all hover:from-teal-500 hover:via-emerald-500 hover:to-cyan-500"
                           >
-                            Upgrade — 14.99 USDT / USDC
+                            <FiZap aria-hidden className="h-4 w-4" />
+                            Upgrade — {DEFAULT_PRO_PRICE_USD} USDT / USDC
                           </button>
                           <p className="mt-2 text-center text-xs text-th-text-muted">
                             Pay with USDT or USDC on ETH, BSC, Tron, or Solana
@@ -431,7 +479,7 @@ export function SettingsPage() {
                       )}
 
                       {subscription.plan !== "pro" && showCheckout && token && (
-                        <div className="mt-6 rounded-xl border border-cyan-500/25 bg-cyan-500/5 p-5">
+                        <div className="mt-6 rounded-xl border border-teal-500/25 bg-gradient-to-br from-teal-500/10 via-emerald-500/5 to-cyan-500/5 p-5">
                           <PaymentCheckout
                             token={token}
                             onSuccess={() => {
@@ -530,8 +578,9 @@ export function SettingsPage() {
                       type="button"
                       disabled={!token || exportLoading}
                       onClick={() => void handleExportChats()}
-                      className="rounded-lg border border-th-border px-4 py-2 text-sm text-th-text transition-colors hover:bg-th-surface disabled:cursor-not-allowed disabled:opacity-50"
+                      className="inline-flex items-center gap-2 rounded-lg border border-th-border bg-th-surface px-4 py-2 text-sm font-medium text-th-text transition-colors hover:border-teal-500/50 hover:text-teal-700 dark:hover:text-teal-300 disabled:cursor-not-allowed disabled:opacity-50"
                     >
+                      <FiDownload aria-hidden className="h-4 w-4" />
                       {exportLoading ? "Exporting…" : "Export"}
                     </button>
                   </SettingsRow>
@@ -543,8 +592,9 @@ export function SettingsPage() {
                       type="button"
                       onClick={() => setDeleteConfirmOpen(true)}
                       disabled={!token || deleteLoading}
-                      className="rounded-lg border border-red-900/50 bg-red-950/30 px-4 py-2 text-sm text-red-200/80 transition-colors hover:bg-red-900/30 disabled:cursor-not-allowed disabled:opacity-50 dark:border-red-900/50 dark:bg-red-950/30 dark:text-red-200/80"
+                      className="inline-flex items-center gap-2 rounded-lg border border-red-500/40 bg-red-500/10 px-4 py-2 text-sm font-medium text-red-600 transition-colors hover:bg-red-500/20 disabled:cursor-not-allowed disabled:opacity-50 dark:text-red-300"
                     >
+                      <FiTrash2 aria-hidden className="h-4 w-4" />
                       {deleteLoading ? "Deleting…" : "Delete all"}
                     </button>
                   </SettingsRow>
@@ -579,8 +629,9 @@ export function SettingsPage() {
                     <button
                       type="button"
                       onClick={openPasswordModal}
-                      className="rounded-lg border border-th-border px-4 py-2 text-sm text-th-text hover:bg-th-surface"
+                      className="inline-flex items-center gap-2 rounded-lg border border-th-border bg-th-surface px-4 py-2 text-sm font-medium text-th-text transition-colors hover:border-teal-500/50 hover:text-teal-700 dark:hover:text-teal-300"
                     >
+                      <FiEdit3 aria-hidden className="h-4 w-4" />
                       Change
                     </button>
                   </SettingsRow>
@@ -591,8 +642,9 @@ export function SettingsPage() {
                     <button
                       type="button"
                       onClick={handleLogout}
-                      className="rounded-lg border border-th-border px-4 py-2 text-sm text-th-text hover:bg-th-surface"
+                      className="inline-flex items-center gap-2 rounded-lg border border-th-border bg-th-surface px-4 py-2 text-sm font-medium text-th-text transition-colors hover:border-teal-500/50 hover:text-teal-700 dark:hover:text-teal-300"
                     >
+                      <FiLogOut aria-hidden className="h-4 w-4" />
                       Log out
                     </button>
                   </SettingsRow>
@@ -605,7 +657,7 @@ export function SettingsPage() {
 
       {deleteConfirmOpen && (
         <div
-          className="fixed inset-0 z-50 flex items-center justify-center p-4"
+          className="fixed inset-0 z-[110] flex items-center justify-center p-4"
           role="presentation"
           onMouseDown={(e) => {
             if (e.target === e.currentTarget && !deleteLoading) setDeleteConfirmOpen(false);
@@ -616,11 +668,11 @@ export function SettingsPage() {
             role="dialog"
             aria-modal="true"
             aria-labelledby="delete-all-title"
-            className="relative w-full max-w-md rounded-2xl border border-red-900/50 bg-th-surface p-6 shadow-2xl"
+            className="relative w-full max-w-md rounded-2xl border border-red-500/40 bg-th-surface p-6 shadow-2xl"
           >
             <div className="mb-4 flex items-start gap-3">
-              <div className="mt-0.5 rounded-full bg-red-950/40 p-2 text-red-300">
-                <WarningIcon />
+              <div className="mt-0.5 rounded-full bg-red-500/15 p-2 text-red-500">
+                <FiAlertTriangle aria-hidden className="h-5 w-5" />
               </div>
               <div>
                 <h3 id="delete-all-title" className="text-lg font-semibold text-th-text">
@@ -637,16 +689,18 @@ export function SettingsPage() {
                 type="button"
                 disabled={deleteLoading}
                 onClick={() => setDeleteConfirmOpen(false)}
-                className="rounded-lg border border-th-border px-4 py-2 text-sm text-th-text hover:bg-th-input disabled:opacity-50"
+                className="inline-flex items-center justify-center gap-2 rounded-lg border border-th-border px-4 py-2 text-sm font-medium text-th-text hover:bg-th-input disabled:opacity-50"
               >
+                <FiX aria-hidden className="h-4 w-4" />
                 Cancel
               </button>
               <button
                 type="button"
                 disabled={deleteLoading}
                 onClick={() => void handleDeleteAllChats()}
-                className="rounded-lg border border-red-900/50 bg-red-950/30 px-4 py-2 text-sm font-medium text-red-200 transition-colors hover:bg-red-900/30 disabled:opacity-50"
+                className="inline-flex items-center justify-center gap-2 rounded-lg border border-red-500/40 bg-red-500/10 px-4 py-2 text-sm font-medium text-red-600 transition-colors hover:bg-red-500/20 disabled:opacity-50 dark:text-red-300"
               >
+                <FiTrash2 aria-hidden className="h-4 w-4" />
                 {deleteLoading ? "Deleting…" : "Yes, delete all"}
               </button>
             </div>
@@ -656,7 +710,7 @@ export function SettingsPage() {
 
       {passwordModalOpen && (
         <div
-          className="fixed inset-0 z-50 flex items-center justify-center p-4"
+          className="fixed inset-0 z-[110] flex items-center justify-center p-4"
           role="presentation"
           onMouseDown={(e) => {
             if (e.target === e.currentTarget && !passwordSubmitting) closePasswordModal();
@@ -670,8 +724,8 @@ export function SettingsPage() {
             className="relative w-full max-w-md rounded-2xl border border-th-border bg-th-surface p-6 shadow-2xl"
           >
             <div className="mb-4 flex items-start gap-3">
-              <div className="mt-0.5 rounded-full bg-th-input p-2 text-th-text">
-                <LockIcon />
+              <div className="mt-0.5 rounded-full bg-teal-500/10 p-2 text-teal-600 dark:text-teal-300">
+                <FiLock aria-hidden className="h-5 w-5" />
               </div>
               <div>
                 <h3 id="change-password-title" className="text-lg font-semibold text-th-text">
@@ -745,16 +799,18 @@ export function SettingsPage() {
                 type="button"
                 disabled={passwordSubmitting}
                 onClick={closePasswordModal}
-                className="rounded-lg border border-th-border px-4 py-2 text-sm text-th-text hover:bg-th-input disabled:opacity-50"
+                className="inline-flex items-center justify-center gap-2 rounded-lg border border-th-border px-4 py-2 text-sm font-medium text-th-text hover:bg-th-input disabled:opacity-50"
               >
+                <FiX aria-hidden className="h-4 w-4" />
                 Cancel
               </button>
               <button
                 type="button"
                 disabled={passwordSubmitting || !canSubmitPassword}
                 onClick={() => void handleChangePassword()}
-                className="rounded-lg bg-slate-900 px-4 py-2 text-sm font-medium text-white hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-50"
+                className="inline-flex items-center justify-center gap-2 rounded-lg bg-gradient-to-r from-teal-600 to-emerald-600 px-4 py-2 text-sm font-semibold text-white shadow-teal-glow transition-colors hover:from-teal-500 hover:to-emerald-500 disabled:cursor-not-allowed disabled:opacity-50"
               >
+                <FiSave aria-hidden className="h-4 w-4" />
                 {passwordSubmitting ? "Saving…" : "Update password"}
               </button>
             </div>
@@ -765,41 +821,10 @@ export function SettingsPage() {
   );
 }
 
-function BackIcon() {
+function CheckBullet() {
   return (
-    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-      <path d="M15 18l-6-6 6-6" strokeLinecap="round" strokeLinejoin="round" />
-    </svg>
-  );
-}
-
-function CheckIcon() {
-  return (
-    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="shrink-0 text-violet-400">
-      <path d="M20 6L9 17l-5-5" strokeLinecap="round" strokeLinejoin="round" />
-    </svg>
-  );
-}
-
-function WarningIcon() {
-  return (
-    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-      <path d="M12 9v4" strokeLinecap="round" />
-      <path d="M12 17h.01" strokeLinecap="round" />
-      <path
-        d="M10.29 3.86 1.82 18a2 2 0 0 0 1.72 3h16.92a2 2 0 0 0 1.72-3L13.71 3.86a2 2 0 0 0-3.42 0z"
-        strokeLinecap="round"
-        strokeLinejoin="round"
-      />
-    </svg>
-  );
-}
-
-function LockIcon() {
-  return (
-    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-      <rect x="3" y="11" width="18" height="10" rx="2" />
-      <path d="M7 11V7a5 5 0 0 1 10 0v4" />
-    </svg>
+    <span className="inline-flex h-4 w-4 shrink-0 items-center justify-center rounded-full bg-teal-500/15 text-teal-600 dark:text-teal-300">
+      <FiCheck aria-hidden className="h-3 w-3" />
+    </span>
   );
 }

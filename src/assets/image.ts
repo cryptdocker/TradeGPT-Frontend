@@ -1,4 +1,4 @@
-import Logo from "./logo.png";
+import Logo from "./Logo.png";
 
 export const Images = {
     Logo,

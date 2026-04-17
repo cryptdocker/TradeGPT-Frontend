@@ -1,7 +1,27 @@
 import { useCallback, useEffect, useId, useRef, useState } from "react";
+import {
+  FiUserPlus,
+  FiLogIn,
+  FiX,
+  FiArrowLeft,
+  FiArrowRight,
+  FiAlertCircle,
+  FiMail,
+  FiCheckCircle,
+  FiRefreshCw,
+} from "react-icons/fi";
 import { useAuth } from "@/context/AuthContext";
 import { evaluatePasswordStrength, meetsMinimumPassword } from "@/lib/passwordStrength";
 import { PasswordStrengthIndicator } from "@/components/PasswordStrengthIndicator";
+import {
+  EMAIL_VERIFICATION_CODE_LENGTH,
+  VERIFICATION_RESEND_COOLDOWN_SECONDS,
+} from "@/config/constants";
+
+const EMPTY_CODE_DIGITS: string[] = Array.from(
+  { length: EMAIL_VERIFICATION_CODE_LENGTH },
+  () => "",
+);
 
 type Props = {
   open: boolean;
@@ -22,9 +42,11 @@ export function SignUpDialog({ open, onClose, onOpenSignIn }: Props) {
   const [error, setError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
 
-  const [digits, setDigits] = useState<string[]>(["", "", "", "", "", ""]);
+  const [digits, setDigits] = useState<string[]>(() => [...EMPTY_CODE_DIGITS]);
   const inputRefs = useRef<(HTMLInputElement | null)[]>([]);
   const [resendCooldown, setResendCooldown] = useState(0);
+
+  const lastDigitIndex = EMAIL_VERIFICATION_CODE_LENGTH - 1;
 
   const strength = evaluatePasswordStrength(password);
 
@@ -34,7 +56,7 @@ export function SignUpDialog({ open, onClose, onOpenSignIn }: Props) {
       setEmail("");
       setPassword("");
       setConfirm("");
-      setDigits(["", "", "", "", "", ""]);
+      setDigits([...EMPTY_CODE_DIGITS]);
       setError(null);
       setResendCooldown(0);
     }
@@ -66,11 +88,11 @@ export function SignUpDialog({ open, onClose, onOpenSignIn }: Props) {
       const next = [...digits];
       next[index] = value;
       setDigits(next);
-      if (value && index < 5) {
+      if (value && index < lastDigitIndex) {
         inputRefs.current[index + 1]?.focus();
       }
     },
-    [digits]
+    [digits, lastDigitIndex]
   );
 
   const handleDigitKeyDown = useCallback(
@@ -85,17 +107,20 @@ export function SignUpDialog({ open, onClose, onOpenSignIn }: Props) {
   const handleDigitPaste = useCallback(
     (e: React.ClipboardEvent) => {
       e.preventDefault();
-      const pasted = e.clipboardData.getData("text").replace(/\D/g, "").slice(0, 6);
+      const pasted = e.clipboardData
+        .getData("text")
+        .replace(/\D/g, "")
+        .slice(0, EMAIL_VERIFICATION_CODE_LENGTH);
       if (!pasted) return;
       const next = [...digits];
-      for (let i = 0; i < 6; i++) {
+      for (let i = 0; i < EMAIL_VERIFICATION_CODE_LENGTH; i++) {
         next[i] = pasted[i] ?? "";
       }
       setDigits(next);
-      const focusIdx = Math.min(pasted.length, 5);
+      const focusIdx = Math.min(pasted.length, lastDigitIndex);
       inputRefs.current[focusIdx]?.focus();
     },
-    [digits]
+    [digits, lastDigitIndex]
   );
 
   if (!open) return null;
@@ -114,7 +139,7 @@ export function SignUpDialog({ open, onClose, onOpenSignIn }: Props) {
     setSubmitting(true);
     try {
       await register(email.trim(), password, confirm);
-      setResendCooldown(60);
+      setResendCooldown(VERIFICATION_RESEND_COOLDOWN_SECONDS);
       setStep("verify");
     } catch (err) {
       setError(err instanceof Error ? err.message : "Sign up failed");
@@ -127,8 +152,8 @@ export function SignUpDialog({ open, onClose, onOpenSignIn }: Props) {
     e.preventDefault();
     setError(null);
     const code = digits.join("");
-    if (code.length !== 6) {
-      setError("Please enter the full 6-digit code");
+    if (code.length !== EMAIL_VERIFICATION_CODE_LENGTH) {
+      setError(`Please enter the full ${EMAIL_VERIFICATION_CODE_LENGTH}-digit code`);
       return;
     }
     setSubmitting(true);
@@ -146,8 +171,8 @@ export function SignUpDialog({ open, onClose, onOpenSignIn }: Props) {
     setError(null);
     try {
       await resendCode(email.trim());
-      setResendCooldown(60);
-      setDigits(["", "", "", "", "", ""]);
+      setResendCooldown(VERIFICATION_RESEND_COOLDOWN_SECONDS);
+      setDigits([...EMPTY_CODE_DIGITS]);
       inputRefs.current[0]?.focus();
     } catch (err) {
       setError(err instanceof Error ? err.message : "Failed to resend code");
@@ -162,16 +187,17 @@ export function SignUpDialog({ open, onClose, onOpenSignIn }: Props) {
         if (e.target === e.currentTarget) onClose();
       }}
     >
-      <div className="absolute inset-0 bg-slate-950/40 backdrop-blur-md" aria-hidden />
+      <div className="absolute inset-0 bg-slate-950/50 backdrop-blur-md" aria-hidden />
       <div
         role="dialog"
         aria-modal="true"
         aria-labelledby={titleId}
-        className="relative w-full max-w-md rounded-2xl border border-th-border bg-th-surface p-6 shadow-2xl shadow-slate-950/20 backdrop-blur-sm"
+        className="relative w-full max-w-md rounded-2xl border border-th-border bg-th-surface p-6 shadow-2xl shadow-teal-900/20 backdrop-blur-sm"
       >
         {step === "credentials" ? (
           <>
-            <h2 id={titleId} className="text-xl font-bold tracking-tight text-th-text">
+            <h2 id={titleId} className="flex items-center gap-2 text-xl font-bold tracking-tight text-th-text">
+              <FiUserPlus aria-hidden className="h-5 w-5 text-teal-500" />
               Create account
             </h2>
             <p className="mt-1 text-sm text-th-text-muted">Join TradeGPT with a secure password.</p>
@@ -189,7 +215,7 @@ export function SignUpDialog({ open, onClose, onOpenSignIn }: Props) {
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
                   placeholder="you@example.com"
-                  className="w-full rounded-lg border border-th-border bg-th-input px-3 py-2 text-sm text-th-text outline-none transition placeholder:text-th-text-muted focus:border-cyan-500 focus:ring-1 focus:ring-cyan-500"
+                  className="w-full rounded-lg border border-th-border bg-th-input px-3 py-2 text-sm text-th-text outline-none transition placeholder:text-th-text-muted focus:border-teal-500 focus:ring-1 focus:ring-teal-500"
                 />
               </div>
               <div>
@@ -203,7 +229,7 @@ export function SignUpDialog({ open, onClose, onOpenSignIn }: Props) {
                   required
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
-                  className="w-full rounded-lg border border-th-border bg-th-input px-3 py-2 text-sm text-th-text outline-none transition focus:border-cyan-500 focus:ring-1 focus:ring-cyan-500"
+                  className="w-full rounded-lg border border-th-border bg-th-input px-3 py-2 text-sm text-th-text outline-none transition focus:border-teal-500 focus:ring-1 focus:ring-teal-500"
                 />
                 {password.length > 0 && (
                   <PasswordStrengthIndicator strength={strength} className="mt-3" />
@@ -220,7 +246,7 @@ export function SignUpDialog({ open, onClose, onOpenSignIn }: Props) {
                   required
                   value={confirm}
                   onChange={(e) => setConfirm(e.target.value)}
-                  className="w-full rounded-lg border border-th-border bg-th-input px-3 py-2 text-sm text-th-text outline-none transition focus:border-cyan-500 focus:ring-1 focus:ring-cyan-500"
+                  className="w-full rounded-lg border border-th-border bg-th-input px-3 py-2 text-sm text-th-text outline-none transition focus:border-teal-500 focus:ring-1 focus:ring-teal-500"
                 />
                 {confirm.length > 0 && password !== confirm && (
                   <p className="mt-1 text-xs font-medium text-red-500">Passwords do not match</p>
@@ -229,10 +255,11 @@ export function SignUpDialog({ open, onClose, onOpenSignIn }: Props) {
 
               {error && (
                 <p
-                  className="rounded-lg border border-red-400/30 bg-red-500/10 px-3 py-2 text-sm text-red-500"
+                  className="flex items-start gap-2 rounded-lg border border-red-400/30 bg-red-500/10 px-3 py-2 text-sm text-red-500"
                   role="alert"
                 >
-                  {error}
+                  <FiAlertCircle aria-hidden className="mt-0.5 h-4 w-4 shrink-0" />
+                  <span>{error}</span>
                 </p>
               )}
 
@@ -240,15 +267,17 @@ export function SignUpDialog({ open, onClose, onOpenSignIn }: Props) {
                 <button
                   type="button"
                   onClick={onClose}
-                  className="order-2 rounded-lg px-4 py-2 text-sm font-semibold text-th-text-muted hover:bg-th-input sm:order-1"
+                  className="order-2 inline-flex items-center justify-center gap-2 rounded-lg px-4 py-2 text-sm font-semibold text-th-text-muted hover:bg-th-input sm:order-1"
                 >
+                  <FiX aria-hidden className="h-4 w-4" />
                   Cancel
                 </button>
                 <button
                   type="submit"
                   disabled={submitting}
-                  className="order-1 rounded-lg bg-slate-900 px-4 py-2 text-sm font-semibold text-white shadow-md shadow-slate-900/20 transition-colors hover:bg-slate-800 disabled:opacity-50 sm:order-2"
+                  className="order-1 inline-flex items-center justify-center gap-2 rounded-lg bg-gradient-to-r from-teal-600 to-emerald-600 px-4 py-2 text-sm font-semibold text-white shadow-md shadow-teal-900/30 transition-colors hover:from-teal-500 hover:to-emerald-500 disabled:opacity-50 sm:order-2"
                 >
+                  <FiArrowRight aria-hidden className="h-4 w-4" />
                   {submitting ? "Sending code…" : "Continue"}
                 </button>
               </div>
@@ -258,23 +287,25 @@ export function SignUpDialog({ open, onClose, onOpenSignIn }: Props) {
               Already have an account?{" "}
               <button
                 type="button"
-                className="font-semibold text-cyan-600 hover:text-cyan-500 hover:underline"
+                className="inline-flex items-center gap-1 font-semibold text-teal-600 hover:text-teal-500 hover:underline dark:text-teal-400"
                 onClick={() => {
                   onClose();
                   onOpenSignIn();
                 }}
               >
+                <FiLogIn aria-hidden className="h-3.5 w-3.5" />
                 Sign in
               </button>
             </p>
           </>
         ) : (
           <>
-            <h2 id={titleId} className="text-xl font-bold tracking-tight text-th-text">
+            <h2 id={titleId} className="flex items-center gap-2 text-xl font-bold tracking-tight text-th-text">
+              <FiMail aria-hidden className="h-5 w-5 text-teal-500" />
               Verify your email
             </h2>
             <p className="mt-1 text-sm text-th-text-muted">
-              We sent a 6-digit code to{" "}
+              We sent a {EMAIL_VERIFICATION_CODE_LENGTH}-digit code to{" "}
               <span className="font-medium text-th-text">{email}</span>
             </p>
 
@@ -292,7 +323,7 @@ export function SignUpDialog({ open, onClose, onOpenSignIn }: Props) {
                     value={d}
                     onChange={(e) => handleDigitChange(i, e.target.value)}
                     onKeyDown={(e) => handleDigitKeyDown(i, e)}
-                    className="h-12 w-11 rounded-lg border border-th-border bg-th-input text-center text-lg font-bold text-th-text outline-none transition focus:border-cyan-500 focus:ring-1 focus:ring-cyan-500"
+                    className="h-12 w-11 rounded-lg border border-th-border bg-th-input text-center text-lg font-bold text-th-text outline-none transition focus:border-teal-500 focus:ring-1 focus:ring-teal-500"
                     aria-label={`Digit ${i + 1}`}
                   />
                 ))}
@@ -304,18 +335,20 @@ export function SignUpDialog({ open, onClose, onOpenSignIn }: Props) {
                   type="button"
                   disabled={resendCooldown > 0}
                   onClick={handleResend}
-                  className="font-semibold text-cyan-600 hover:underline disabled:cursor-not-allowed disabled:text-th-text-muted disabled:no-underline"
+                  className="inline-flex items-center gap-1 font-semibold text-teal-600 hover:underline disabled:cursor-not-allowed disabled:text-th-text-muted disabled:no-underline dark:text-teal-400"
                 >
+                  <FiRefreshCw aria-hidden className="h-3.5 w-3.5" />
                   {resendCooldown > 0 ? `Resend in ${resendCooldown}s` : "Resend code"}
                 </button>
               </p>
 
               {error && (
                 <p
-                  className="rounded-lg border border-red-400/30 bg-red-500/10 px-3 py-2 text-sm text-red-500"
+                  className="flex items-start gap-2 rounded-lg border border-red-400/30 bg-red-500/10 px-3 py-2 text-sm text-red-500"
                   role="alert"
                 >
-                  {error}
+                  <FiAlertCircle aria-hidden className="mt-0.5 h-4 w-4 shrink-0" />
+                  <span>{error}</span>
                 </p>
               )}
 
@@ -324,18 +357,20 @@ export function SignUpDialog({ open, onClose, onOpenSignIn }: Props) {
                   type="button"
                   onClick={() => {
                     setStep("credentials");
-                    setDigits(["", "", "", "", "", ""]);
+                    setDigits([...EMPTY_CODE_DIGITS]);
                     setError(null);
                   }}
-                  className="order-2 rounded-lg px-4 py-2 text-sm font-semibold text-th-text-muted hover:bg-th-input sm:order-1"
+                  className="order-2 inline-flex items-center justify-center gap-2 rounded-lg px-4 py-2 text-sm font-semibold text-th-text-muted hover:bg-th-input sm:order-1"
                 >
+                  <FiArrowLeft aria-hidden className="h-4 w-4" />
                   Back
                 </button>
                 <button
                   type="submit"
-                  disabled={submitting || digits.join("").length !== 6}
-                  className="order-1 rounded-lg bg-slate-900 px-4 py-2 text-sm font-semibold text-white shadow-md shadow-slate-900/20 transition-colors hover:bg-slate-800 disabled:opacity-50 sm:order-2"
+                  disabled={submitting || digits.join("").length !== EMAIL_VERIFICATION_CODE_LENGTH}
+                  className="order-1 inline-flex items-center justify-center gap-2 rounded-lg bg-gradient-to-r from-teal-600 to-emerald-600 px-4 py-2 text-sm font-semibold text-white shadow-md shadow-teal-900/30 transition-colors hover:from-teal-500 hover:to-emerald-500 disabled:opacity-50 sm:order-2"
                 >
+                  <FiCheckCircle aria-hidden className="h-4 w-4" />
                   {submitting ? "Verifying…" : "Verify & Sign up"}
                 </button>
               </div>

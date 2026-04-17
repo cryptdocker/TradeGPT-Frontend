@@ -1,5 +1,7 @@
-import { useCallback, useEffect, useRef, useState } from "react";
-import { useNavigate, useParams } from "react-router-dom";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useNavigate, useParams, useSearchParams } from "react-router-dom";
+import { AnimatePresence, motion, useReducedMotion } from "framer-motion";
+import { FiRefreshCw } from "react-icons/fi";
 import { useAuth } from "@/context/AuthContext";
 import { ChatSidebar } from "@/components/chat/ChatSidebar";
 import { ChatHeader } from "@/components/chat/ChatHeader";
@@ -19,6 +21,12 @@ import {
 } from "@/lib/chatApi";
 import { isMongoObjectId } from "@/lib/mongoId";
 import { useMediaQuery } from "@/hooks/useMediaQuery";
+import { SettingsView, isValidSettingsSection, type SettingsSectionId } from "@/pages/SettingsPage";
+import {
+  backdropFadeTransition,
+  modalPanelExitTransition,
+  modalPanelTransition,
+} from "@/config/motion";
 
 async function copyToClipboard(text: string): Promise<void> {
   try {
@@ -36,9 +44,56 @@ async function copyToClipboard(text: string): Promise<void> {
 }
 
 export function TradeGPTDashboard() {
+  const reduceMotion = useReducedMotion();
   const { token, user, logout, subscription } = useAuth();
   const navigate = useNavigate();
   const { conversationId: urlConversationId } = useParams<{ conversationId?: string }>();
+  const [searchParams, setSearchParams] = useSearchParams();
+  const settingsModalOpen = searchParams.has("settings");
+  const settingsSection = useMemo((): SettingsSectionId => {
+    const raw = searchParams.get("settings") ?? "";
+    if (!raw) return "general";
+    return isValidSettingsSection(raw) ? raw : "general";
+  }, [searchParams]);
+
+  const openSettings = useCallback(
+    (id: SettingsSectionId = "general") => {
+      setSearchParams(
+        (prev) => {
+          const next = new URLSearchParams(prev);
+          next.set("settings", id);
+          return next;
+        },
+        { replace: false },
+      );
+    },
+    [setSearchParams],
+  );
+
+  const closeSettings = useCallback(() => {
+    setSearchParams(
+      (prev) => {
+        const next = new URLSearchParams(prev);
+        next.delete("settings");
+        return next;
+      },
+      { replace: true },
+    );
+  }, [setSearchParams]);
+
+  const setSettingsSection = useCallback(
+    (id: SettingsSectionId) => {
+      setSearchParams(
+        (prev) => {
+          const next = new URLSearchParams(prev);
+          next.set("settings", id);
+          return next;
+        },
+        { replace: true },
+      );
+    },
+    [setSearchParams],
+  );
   const [modes, setModes] = useState<TradeModeMeta[]>([]);
   const [conversations, setConversations] = useState<
     { id: string; title: string; mode: TradeModeId; messageCount?: number }[]
@@ -409,12 +464,13 @@ export function TradeGPTDashboard() {
   if (modes.length === 0) {
     return (
       <div className="flex min-h-screen flex-col items-center justify-center gap-4 bg-th-bg px-4 text-center text-th-text">
-        <p className="text-sm text-red-300">{loadError ?? "Could not load TradeGPT."}</p>
+        <p className="text-sm text-red-500">{loadError ?? "Could not load TradeGPT."}</p>
         <button
           type="button"
           onClick={() => window.location.reload()}
-          className="rounded-lg bg-th-text px-4 py-2 text-sm font-medium text-th-bg hover:opacity-90"
+          className="inline-flex items-center gap-2 rounded-lg bg-gradient-to-r from-teal-600 to-emerald-600 px-4 py-2 text-sm font-medium text-white shadow-teal-glow hover:from-teal-500 hover:to-emerald-500"
         >
+          <FiRefreshCw aria-hidden className="h-4 w-4" />
           Retry
         </button>
       </div>
@@ -422,6 +478,7 @@ export function TradeGPTDashboard() {
   }
 
   return (
+    <>
     <div className="flex h-[100dvh] w-full overflow-hidden bg-th-bg text-th-text">
       <ChatSidebar
         conversations={conversations}
@@ -432,8 +489,8 @@ export function TradeGPTDashboard() {
         userEmail={user.email}
         subscription={subscription}
         onLogout={logout}
-        onOpenSettings={() => navigate("/settings")}
-        onUpgrade={() => navigate("/settings/subscription")}
+        onOpenSettings={() => openSettings("general")}
+        onUpgrade={() => openSettings("subscription")}
         collapsed={mdUp ? sidebarCollapsed : false}
         onToggleCollapse={() => setSidebarCollapsed((c) => !c)}
         isMobileLayout={!mdUp}
@@ -441,7 +498,7 @@ export function TradeGPTDashboard() {
         onCloseMobile={() => setMobileDrawerOpen(false)}
       />
 
-      <div className="flex min-w-0 flex-1 flex-col pr-[env(safe-area-inset-right)]">
+      <div className="relative z-0 flex min-w-0 flex-1 flex-col pr-[env(safe-area-inset-right)]">
         {modes.length > 0 && (
           <ChatHeader
             modes={modes}
@@ -489,5 +546,53 @@ export function TradeGPTDashboard() {
       </div>
 
     </div>
+
+    <AnimatePresence>
+      {settingsModalOpen && (
+        <>
+          <motion.button
+            key="settings-backdrop"
+            type="button"
+            aria-label="Close settings"
+            className="fixed inset-0 z-[89] cursor-pointer border-0 bg-slate-950/55 p-0 backdrop-blur-[2px] motion-reduce:backdrop-blur-none"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            transition={backdropFadeTransition(reduceMotion)}
+            onClick={closeSettings}
+          />
+          <div className="pointer-events-none fixed inset-0 z-[90] flex items-center justify-center p-3 sm:p-5">
+            <motion.div
+              key="settings-panel"
+              role="dialog"
+              aria-modal="true"
+              aria-labelledby="settings-modal-title"
+              className="pointer-events-auto relative flex h-[min(880px,90dvh)] min-h-0 w-full max-w-4xl flex-col overflow-hidden rounded-2xl border border-th-border bg-th-bg shadow-2xl"
+              initial={reduceMotion ? false : { opacity: 0, y: 28, scale: 0.94 }}
+              animate={{ opacity: 1, y: 0, scale: 1 }}
+              exit={
+                reduceMotion
+                  ? { opacity: 0, transition: modalPanelExitTransition(true) }
+                  : {
+                      opacity: 0,
+                      y: 16,
+                      scale: 0.97,
+                      transition: modalPanelExitTransition(false),
+                    }
+              }
+              transition={modalPanelTransition(reduceMotion)}
+            >
+              <SettingsView
+                variant="modal"
+                section={settingsSection}
+                onSectionChange={setSettingsSection}
+                onClose={closeSettings}
+              />
+            </motion.div>
+          </div>
+        </>
+      )}
+    </AnimatePresence>
+    </>
   );
 }

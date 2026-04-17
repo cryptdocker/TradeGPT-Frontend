@@ -4,29 +4,39 @@
 
 @layer base {
   :root {
-    --color-bg: 246 248 251;
-    --color-sidebar: 242 245 248;
+    /* Light — cool slate neutrals; teal stays on accents (buttons, rings) */
+    --color-bg: 248 250 252;
+    --color-sidebar: 241 245 249;
     --color-surface: 255 255 255;
     --color-input: 255 255 255;
-    --color-input-hover: 246 249 252;
-    --color-code: 244 248 251;
-    --color-border: 221 228 236;
-    --color-border-muted: 204 214 224;
-    --color-text: 18 25 38;
-    --color-text-muted: 94 108 128;
+    --color-input-hover: 241 245 249;
+    --color-code: 241 245 249;
+    --color-border: 226 232 240;
+    --color-border-muted: 203 213 225;
+    --color-text: 15 23 42;
+    --color-text-muted: 100 116 139;
+
+    --color-accent: 13 148 136;
+    --color-accent-soft: 20 184 166;
+    --color-accent-glow: 45 212 191;
   }
 
   .dark {
-    --color-bg: 9 14 24;
-    --color-sidebar: 11 18 30;
-    --color-surface: 18 27 42;
-    --color-input: 20 31 49;
-    --color-input-hover: 27 39 60;
-    --color-code: 13 22 36;
-    --color-border: 42 58 84;
-    --color-border-muted: 60 78 106;
-    --color-text: 235 242 251;
-    --color-text-muted: 147 166 192;
+    /* Transformative Teal — Dark */
+    --color-bg: 6 22 24;
+    --color-sidebar: 8 28 31;
+    --color-surface: 13 38 42;
+    --color-input: 15 46 51;
+    --color-input-hover: 21 58 63;
+    --color-code: 10 32 36;
+    --color-border: 26 74 78;
+    --color-border-muted: 42 102 106;
+    --color-text: 225 245 241;
+    --color-text-muted: 144 186 180;
+
+    --color-accent: 45 212 191;        /* teal-400 */
+    --color-accent-soft: 20 184 166;   /* teal-500 */
+    --color-accent-glow: 153 246 228;  /* teal-200 */
   }
 
   /* Slim, theme-aware scrollbars (Firefox + WebKit) */
@@ -52,11 +62,11 @@
   }
 
   *::-webkit-scrollbar-thumb:hover {
-    background-color: rgb(var(--color-text-muted) / 0.5);
+    background-color: rgb(var(--color-accent) / 0.55);
   }
 
   *::-webkit-scrollbar-thumb:active {
-    background-color: rgb(var(--color-text-muted) / 0.65);
+    background-color: rgb(var(--color-accent) / 0.75);
   }
 
   *::-webkit-scrollbar-corner {
@@ -75,9 +85,18 @@ body {
   @apply min-h-screen bg-th-bg font-sans text-th-text antialiased;
   height: 100%;
   background-image:
-    radial-gradient(1100px circle at 12% -10%, rgb(14 165 233 / 0.12), transparent 50%),
-    radial-gradient(1000px circle at 92% 10%, rgb(20 184 166 / 0.1), transparent 55%);
+    radial-gradient(1100px circle at 10% -10%, rgb(20 184 166 / 0.16), transparent 52%),
+    radial-gradient(900px circle at 92% 8%, rgb(16 185 129 / 0.12), transparent 55%),
+    radial-gradient(700px circle at 50% 110%, rgb(34 211 238 / 0.08), transparent 60%);
   background-attachment: fixed;
+}
+
+/* Light: toned-down mesh so panels stay neutral (dark keeps stronger teal wash above) */
+html:not(.dark) body {
+  background-image:
+    radial-gradient(1000px circle at 12% -8%, rgb(13 148 136 / 0.045), transparent 52%),
+    radial-gradient(900px circle at 92% 6%, rgb(148 163 184 / 0.08), transparent 50%),
+    linear-gradient(165deg, rgb(248 250 252) 0%, rgb(244 246 250) 45%, rgb(241 245 249) 100%);
 }
 
 #root {

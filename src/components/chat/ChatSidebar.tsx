@@ -1,6 +1,32 @@
+import { useEffect, useLayoutEffect, useRef, useState } from "react";
+import { AnimatePresence, motion, useReducedMotion } from "framer-motion";
+import {
+  FiMenu,
+  FiPlus,
+  FiTrash2,
+  FiSettings,
+  FiX,
+  FiLogOut,
+  FiStar,
+} from "react-icons/fi";
 import type { SubscriptionInfo } from "@/lib/api";
+import {
+  backdropFadeTransition,
+  drawerTransition,
+  popoverExitTransition,
+  popoverTransition,
+  sidebarContentTransition,
+  sidebarWidthTransition,
+} from "@/config/motion";
 
 type Conv = { id: string; title: string; mode: string };
+
+const SIDEBAR_RAIL_PX = 56;
+const SIDEBAR_EXPANDED_PX = 260;
+
+/** Header / collapsed-rail icon buttons (same look in both states). */
+const sidebarHeaderIconBtnClass =
+  "flex rounded-full bg-transparent p-3 text-teal-700 transition-colors hover:bg-teal-300/20 dark:text-teal-300 dark:hover:bg-teal-500/20";
 
 type Props = {
   conversations: Conv[];
@@ -38,82 +64,95 @@ export function ChatSidebar({
   mobileOpen = false,
   onCloseMobile,
 }: Props) {
+  const reduceMotion = useReducedMotion();
+  const [userMenuOpen, setUserMenuOpen] = useState(false);
+  /** True while collapsed-rail account menu exit animation runs (keeps z-index/overflow until done). */
+  const [collapsedRailMenuExiting, setCollapsedRailMenuExiting] = useState(false);
+  const userMenuRef = useRef<HTMLDivElement>(null);
+  const userMenuCollapsedRef = useRef<HTMLDivElement>(null);
+  const prevDesktopCollapsedRef = useRef(collapsed);
+  const prevUserMenuOpenRef = useRef(userMenuOpen);
+
+  const widthSpring = sidebarWidthTransition(reduceMotion);
+  const contentCrossfade = sidebarContentTransition(reduceMotion);
+  const drawerSpring = drawerTransition(reduceMotion);
+
+  useEffect(() => {
+    if (!userMenuOpen) return;
+    const close = () => setUserMenuOpen(false);
+    const insideAnchors = (n: Node) =>
+      Boolean(
+        userMenuRef.current?.contains(n) || userMenuCollapsedRef.current?.contains(n),
+      );
+    const onPointerDown = (e: PointerEvent) => {
+      if (!insideAnchors(e.target as Node)) close();
+    };
+    const onKeyDown = (e: globalThis.KeyboardEvent) => {
+      if (e.key === "Escape") close();
+    };
+    document.addEventListener("pointerdown", onPointerDown);
+    document.addEventListener("keydown", onKeyDown);
+    return () => {
+      document.removeEventListener("pointerdown", onPointerDown);
+      document.removeEventListener("keydown", onKeyDown);
+    };
+  }, [userMenuOpen]);
+
+  useEffect(() => {
+    if (isMobileLayout) return;
+    if (prevDesktopCollapsedRef.current !== collapsed) {
+      setUserMenuOpen(false);
+      setCollapsedRailMenuExiting(false);
+      prevDesktopCollapsedRef.current = collapsed;
+    }
+  }, [collapsed, isMobileLayout]);
+
+  useLayoutEffect(() => {
+    if (isMobileLayout || !collapsed) {
+      setCollapsedRailMenuExiting(false);
+    } else if (userMenuOpen) {
+      setCollapsedRailMenuExiting(false);
+    } else if (prevUserMenuOpenRef.current) {
+      setCollapsedRailMenuExiting(true);
+    }
+    prevUserMenuOpenRef.current = userMenuOpen;
+  }, [userMenuOpen, collapsed, isMobileLayout]);
+
   const closeOrToggle = () => {
     if (isMobileLayout && onCloseMobile) onCloseMobile();
     else onToggleCollapse();
   };
 
-  const mobileAsideBase =
-    "fixed inset-y-0 left-0 z-50 flex h-[100dvh] w-[min(288px,88vw)] flex-col border-r border-th-border/90 bg-th-sidebar/95 shadow-2xl backdrop-blur-md transition-transform duration-300 ease-out motion-reduce:transition-none pl-[env(safe-area-inset-left)]";
-  const mobileAsideOpen = "translate-x-0";
-  const mobileAsideClosed = "-translate-x-full pointer-events-none";
+  const accountMenuInExpandedFooter = isMobileLayout || !collapsed;
 
-  if (collapsed && !isMobileLayout) {
-    return (
-      <aside className="flex w-14 shrink-0 flex-col border-r border-th-border bg-th-sidebar">
-        <div className="flex flex-col items-center gap-2 p-2">
-          <button
-            type="button"
-            onClick={onToggleCollapse}
-            className="min-h-[44px] min-w-[44px] rounded-lg p-2 text-th-text hover:bg-th-surface"
-            title="Open sidebar"
-            aria-label="Open sidebar"
-          >
-            <MenuIcon />
-          </button>
-          <button
-            type="button"
-            onClick={onNewChat}
-            className="min-h-[44px] min-w-[44px] rounded-lg p-2 text-th-text hover:bg-th-surface"
-            title="New chat"
-            aria-label="New chat"
-          >
-            <PlusIcon />
-          </button>
-          <button
-            type="button"
-            onClick={onOpenSettings}
-            className="min-h-[44px] min-w-[44px] rounded-lg p-2 text-th-text hover:bg-th-surface"
-            title="Settings"
-            aria-label="Settings"
-          >
-            <GearIcon />
-          </button>
-        </div>
-      </aside>
-    );
-  }
-
-  const expandedAside = (
-    <aside
-      className={
-        isMobileLayout
-          ? `${mobileAsideBase} ${mobileOpen ? mobileAsideOpen : mobileAsideClosed}`
-          : "flex w-[260px] shrink-0 flex-col border-r border-th-border/90 bg-th-sidebar/95 backdrop-blur-sm"
-      }
-      aria-hidden={isMobileLayout ? !mobileOpen : undefined}
-    >
-      <div className="flex items-center gap-1 p-2">
+  const expandedBody = (
+    <>
+      <div className="flex items-center justify-between gap-1 p-2">
         <button
           type="button"
           onClick={closeOrToggle}
-          className="min-h-[44px] min-w-[44px] shrink-0 rounded-lg p-2 text-th-text hover:bg-th-surface"
+          className={sidebarHeaderIconBtnClass}
           title={isMobileLayout ? "Close menu" : "Close sidebar"}
           aria-label={isMobileLayout ? "Close menu" : "Close sidebar"}
         >
-          <MenuIcon />
+          {isMobileLayout ? (
+            <FiX aria-hidden className="h-5 w-5" />
+          ) : (
+            <FiMenu aria-hidden className="h-5 w-5" />
+          )}
         </button>
         <button
           type="button"
           onClick={onNewChat}
-          className="flex min-h-[44px] flex-1 items-center gap-2 rounded-xl border border-th-border bg-th-input px-3 py-2 text-sm font-medium text-th-text transition-colors hover:bg-th-input-hover"
+          title="New chat"
+          aria-label="New chat"
+          className={sidebarHeaderIconBtnClass}
         >
-          <PlusIcon />
-          New chat
+          <FiPlus aria-hidden className="h-4 w-4" />
         </button>
       </div>
 
-      <nav className="flex-1 overflow-y-auto px-2 pb-2">
+      <nav className="min-h-0 flex-1 overflow-y-auto p-2">
         <ul className="space-y-0.5">
           {conversations.map((c) => (
             <li key={c.id} className="group relative">
@@ -122,7 +161,7 @@ export function ChatSidebar({
                 onClick={() => onSelect(c.id)}
                 className={`w-full truncate rounded-lg px-3 py-2.5 text-left text-sm transition-colors ${
                   c.id === activeId
-                    ? "bg-th-surface text-th-text shadow-sm"
+                    ? "bg-teal-500/15 text-th-text shadow-sm ring-1 ring-teal-500/30 dark:bg-teal-400/15 dark:ring-teal-400/25"
                     : "text-th-text/90 hover:bg-th-input"
                 }`}
               >
@@ -134,11 +173,11 @@ export function ChatSidebar({
                   e.stopPropagation();
                   onDelete(c.id);
                 }}
-                className="absolute right-1 top-1/2 flex -translate-y-1/2 rounded-md p-2 text-th-text-muted opacity-100 hover:bg-th-input hover:text-th-text md:opacity-0 md:group-hover:opacity-100"
+                className="absolute right-1 top-1/2 flex -translate-y-1/2 rounded-md p-2 text-th-text-muted opacity-100 hover:bg-th-input hover:text-red-500 md:opacity-0 md:group-hover:opacity-100"
                 title="Delete chat"
                 aria-label="Delete chat"
               >
-                <TrashIcon />
+                <FiTrash2 aria-hidden className="h-4 w-4" />
               </button>
             </li>
           ))}
@@ -146,156 +185,264 @@ export function ChatSidebar({
       </nav>
 
       <div className="border-t border-th-border p-2 pb-[max(0.5rem,env(safe-area-inset-bottom))]">
-        {subscription && (
-          <div className="mb-1 px-2">
-            <PlanBadge subscription={subscription} />
-          </div>
-        )}
-        {subscription && subscription.plan !== "pro" && (
+        <div ref={userMenuRef} className="relative">
           <button
             type="button"
-            onClick={onUpgrade}
-            className="mb-1 flex w-full items-center justify-center gap-1.5 rounded-xl bg-slate-900 px-3 py-2 text-xs font-medium text-white transition-colors hover:bg-slate-800"
+            onClick={() => setUserMenuOpen((o) => !o)}
+            aria-expanded={userMenuOpen}
+            aria-haspopup="menu"
+            className="flex w-full items-center gap-3 rounded-lg px-2 py-2 text-left transition-colors hover:bg-th-input data-[state=open]:bg-th-input"
+            data-state={userMenuOpen ? "open" : "closed"}
+            title="Account menu"
+            aria-label="Account menu"
           >
-            <StarIcon />
-            Upgrade to Pro
-          </button>
-        )}
-        <div className="flex items-center gap-2 rounded-lg px-2 py-2">
-          <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-cyan-600 text-xs font-semibold text-white">
-            {userEmail.charAt(0).toUpperCase()}
-          </div>
-          <div className="min-w-0 flex-1">
-            <p className="truncate text-xs text-th-text">{userEmail}</p>
-            <div className="mt-0.5 flex flex-wrap gap-x-3 gap-y-1">
-              <button
-                type="button"
-                onClick={onOpenSettings}
-                className="text-xs text-th-text-muted hover:text-th-text"
-              >
-                Settings
-              </button>
-              <button
-                type="button"
-                onClick={onLogout}
-                className="text-xs text-th-text-muted hover:text-th-text"
-              >
-                Log out
-              </button>
+            <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-teal-500 to-emerald-600 text-sm font-semibold text-white shadow-sm">
+              {userEmail.charAt(0).toUpperCase()}
             </div>
-          </div>
+            <div className="min-w-0 flex-1">
+              <p className="truncate text-xs font-medium text-th-text">{userEmail}</p>
+              <p className="truncate text-[11px] text-th-text-muted">
+                {planLabel(subscription)}
+              </p>
+            </div>
+          </button>
+          <AnimatePresence>
+            {userMenuOpen && accountMenuInExpandedFooter && (
+              <AccountMenuPanel
+                key="account-menu-footer"
+                className="absolute bottom-full left-0 right-0 mb-1"
+                reduceMotion={reduceMotion}
+                onOpenSettings={() => {
+                  setUserMenuOpen(false);
+                  onOpenSettings();
+                }}
+                onUpgrade={() => {
+                  setUserMenuOpen(false);
+                  onUpgrade();
+                }}
+                onLogout={() => {
+                  setUserMenuOpen(false);
+                  onLogout();
+                }}
+              />
+            )}
+          </AnimatePresence>
         </div>
       </div>
-    </aside>
+    </>
   );
 
   if (!isMobileLayout) {
-    return expandedAside;
+    return (
+      <motion.aside
+        initial={false}
+        animate={{
+          width: collapsed ? SIDEBAR_RAIL_PX : SIDEBAR_EXPANDED_PX,
+        }}
+        transition={widthSpring}
+        className={`relative flex h-full shrink-0 flex-col border-r border-th-border/90 bg-th-sidebar/95 backdrop-blur-sm will-change-[width] motion-reduce:will-change-auto ${
+          userMenuOpen || collapsedRailMenuExiting ? "overflow-visible" : "overflow-hidden"
+        } ${
+          /* Keep lift until exit animation finishes, or main paints over the fading menu */
+          collapsed && (userMenuOpen || collapsedRailMenuExiting) ? "z-[70]" : "z-0"
+        }`}
+      >
+        <div className="relative min-h-0 flex-1">
+          <motion.div
+            aria-hidden={!collapsed}
+            className="absolute inset-0 flex min-h-0 flex-col items-center p-2"
+            initial={false}
+            animate={{
+              opacity: collapsed ? 1 : 0,
+              scale: collapsed ? 1 : 0.93,
+              x: collapsed ? 0 : -6,
+            }}
+            transition={contentCrossfade}
+            style={{ pointerEvents: collapsed ? "auto" : "none" }}
+          >
+            <div className="flex flex-col items-center gap-2">
+              <button
+                type="button"
+                onClick={onToggleCollapse}
+                className={sidebarHeaderIconBtnClass}
+                title="Open sidebar"
+                aria-label="Open sidebar"
+              >
+                <FiMenu aria-hidden className="h-5 w-5" />
+              </button>
+              <button
+                type="button"
+                onClick={onNewChat}
+                className={sidebarHeaderIconBtnClass}
+                title="New chat"
+                aria-label="New chat"
+              >
+                <FiPlus aria-hidden className="h-4 w-4" />
+              </button>
+            </div>
+            <div
+              ref={userMenuCollapsedRef}
+              className="mt-auto flex w-full flex-col items-center pb-[max(0.25rem,env(safe-area-inset-bottom))] pt-2"
+            >
+              <div className="relative flex w-full justify-center">
+                <button
+                  type="button"
+                  onClick={() => setUserMenuOpen((o) => !o)}
+                  aria-expanded={userMenuOpen}
+                  aria-haspopup="menu"
+                  title="Account menu"
+                  aria-label="Account menu"
+                  data-state={userMenuOpen ? "open" : "closed"}
+                  className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-teal-500 to-emerald-600 text-sm font-semibold text-white shadow-sm ring-2 ring-transparent transition-[box-shadow,transform] hover:ring-teal-400/40 data-[state=open]:ring-teal-400/50"
+                >
+                  {userEmail.charAt(0).toUpperCase()}
+                </button>
+                <AnimatePresence
+                  onExitComplete={() => {
+                    setCollapsedRailMenuExiting(false);
+                  }}
+                >
+                  {userMenuOpen && collapsed && (
+                    <AccountMenuPanel
+                      key="account-menu-rail"
+                      className="absolute bottom-full left-0 z-[1] mb-1 min-w-[12rem] w-[min(240px,calc(100vw-env(safe-area-inset-left)-0.75rem))]"
+                      reduceMotion={reduceMotion}
+                      onOpenSettings={() => {
+                        setUserMenuOpen(false);
+                        onOpenSettings();
+                      }}
+                      onUpgrade={() => {
+                        setUserMenuOpen(false);
+                        onUpgrade();
+                      }}
+                      onLogout={() => {
+                        setUserMenuOpen(false);
+                        onLogout();
+                      }}
+                    />
+                  )}
+                </AnimatePresence>
+              </div>
+            </div>
+          </motion.div>
+
+          <motion.div
+            className="absolute inset-0 flex min-h-0 w-[260px] flex-col"
+            initial={false}
+            animate={{
+              opacity: collapsed ? 0 : 1,
+              scale: collapsed ? 0.96 : 1,
+              x: collapsed ? -10 : 0,
+            }}
+            transition={contentCrossfade}
+            style={{ pointerEvents: collapsed ? "none" : "auto" }}
+            aria-hidden={collapsed}
+          >
+            {expandedBody}
+          </motion.div>
+        </div>
+      </motion.aside>
+    );
   }
 
   return (
     <>
-      {mobileOpen && onCloseMobile && (
-        <button
-          type="button"
-          className="fixed inset-0 z-40 bg-slate-950/45 backdrop-blur-[1px] motion-reduce:backdrop-blur-none"
-          aria-label="Close menu"
-          onClick={onCloseMobile}
-        />
-      )}
-      {expandedAside}
+      <AnimatePresence>
+        {mobileOpen && onCloseMobile && (
+          <motion.button
+            key="drawer-backdrop"
+            type="button"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            transition={backdropFadeTransition(reduceMotion)}
+            className="fixed inset-0 z-40 bg-slate-950/50 backdrop-blur-[1px] motion-reduce:backdrop-blur-none"
+            aria-label="Close menu"
+            onClick={onCloseMobile}
+          />
+        )}
+      </AnimatePresence>
+
+      <motion.aside
+        initial={false}
+        animate={{ x: mobileOpen ? 0 : "-100%" }}
+        transition={drawerSpring}
+        style={{ pointerEvents: mobileOpen ? "auto" : "none" }}
+        aria-hidden={!mobileOpen}
+        className="fixed inset-y-0 left-0 z-50 flex h-[100dvh] w-[min(288px,88vw)] flex-col border-r border-th-border/90 bg-th-sidebar/95 pl-[env(safe-area-inset-left)] shadow-2xl backdrop-blur-md will-change-transform motion-reduce:will-change-auto"
+      >
+        {expandedBody}
+      </motion.aside>
     </>
   );
 }
 
-function MenuIcon() {
+type AccountMenuPanelProps = {
+  className?: string;
+  reduceMotion: boolean | null;
+  onOpenSettings: () => void;
+  onUpgrade: () => void;
+  onLogout: () => void;
+};
+
+function AccountMenuPanel({
+  className = "",
+  reduceMotion,
+  onOpenSettings,
+  onUpgrade,
+  onLogout,
+}: AccountMenuPanelProps) {
+  const instant = Boolean(reduceMotion);
   return (
-    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-      <path d="M4 6h16M4 12h16M4 18h16" strokeLinecap="round" />
-    </svg>
-  );
-}
-
-function PlusIcon() {
-  return (
-    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-      <path d="M12 5v14M5 12h14" strokeLinecap="round" />
-    </svg>
-  );
-}
-
-function TrashIcon() {
-  return (
-    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-      <path d="M3 6h18M8 6V4h8v2M19 6v14a2 2 0 01-2 2H7a2 2 0 01-2-2V6" strokeLinecap="round" />
-    </svg>
-  );
-}
-
-function GearIcon() {
-  return (
-    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-      <circle cx="12" cy="12" r="3" />
-      <path
-        d="M12 1v2M12 21v2M4.22 4.22l1.42 1.42M18.36 18.36l1.42 1.42M1 12h2M21 12h2M4.22 19.78l1.42-1.42M18.36 5.64l1.42-1.42"
-        strokeLinecap="round"
-      />
-    </svg>
-  );
-}
-
-function PlanBadge({ subscription }: { subscription: SubscriptionInfo }) {
-  const isPro = subscription.plan === "pro";
-  const isTrial = subscription.trialActive;
-
-  if (isPro) {
-    return (
-      <div className="flex items-center gap-1.5 rounded-lg border border-cyan-500/30 bg-cyan-500/10 px-2.5 py-1.5">
-        <StarIcon />
-        <span className="text-xs font-semibold text-cyan-500">Pro Plan</span>
-      </div>
-    );
-  }
-
-  if (isTrial) {
-    const days = subscription.trialDaysLeft;
-    const urgent = days <= 2;
-    return (
-      <div
-        className={`flex items-center gap-1.5 rounded-lg px-2.5 py-1.5 ${
-          urgent
-            ? "bg-amber-500/10 border border-amber-500/30"
-            : "bg-cyan-500/10 border border-cyan-500/30"
-        }`}
+    <motion.div
+      role="menu"
+      initial={instant ? false : { opacity: 0, y: 10, scale: 0.94 }}
+      animate={{ opacity: 1, y: 0, scale: 1 }}
+      exit={
+        instant
+          ? { opacity: 0, transition: popoverExitTransition(true) }
+          : { opacity: 0, y: 6, scale: 0.96, transition: popoverExitTransition(false) }
+      }
+      transition={popoverTransition(reduceMotion)}
+      className={`origin-bottom overflow-hidden rounded-lg border border-th-border bg-th-surface py-1 shadow-lg ring-1 ring-black/5 dark:ring-white/10 ${className}`}
+    >
+      <button
+        type="button"
+        role="menuitem"
+        className="flex w-full items-center gap-2 px-3 py-2.5 text-left text-sm text-th-text hover:bg-th-input"
+        onClick={onOpenSettings}
       >
-        <ClockIcon className={urgent ? "text-amber-500" : "text-cyan-500"} />
-        <span className={`text-xs font-medium ${urgent ? "text-amber-500" : "text-cyan-500"}`}>
-          Free Trial — {days} day{days === 1 ? "" : "s"} left
-        </span>
-      </div>
-    );
+        <FiSettings aria-hidden className="h-4 w-4 shrink-0 text-th-text-muted" />
+        Settings
+      </button>
+      <button
+        type="button"
+        role="menuitem"
+        className="flex w-full items-center gap-2 px-3 py-2.5 text-left text-sm text-th-text hover:bg-th-input"
+        onClick={onUpgrade}
+      >
+        <FiStar aria-hidden className="h-4 w-4 shrink-0 text-teal-600 dark:text-teal-400" />
+        Upgrade Plan
+      </button>
+      <button
+        type="button"
+        role="menuitem"
+        className="flex w-full items-center gap-2 px-3 py-2.5 text-left text-sm text-red-600 hover:bg-th-input dark:text-red-400"
+        onClick={onLogout}
+      >
+        <FiLogOut aria-hidden className="h-4 w-4 shrink-0 opacity-80" />
+        Log Out
+      </button>
+    </motion.div>
+  );
+}
+
+function planLabel(subscription: SubscriptionInfo | null): string {
+  if (!subscription) return "Free Plan";
+  if (subscription.plan === "pro") return "Pro Plan";
+  if (subscription.trialActive) {
+    const days = subscription.trialDaysLeft;
+    return `Free Trial — ${days} day${days === 1 ? "" : "s"} left`;
   }
-
-  return (
-    <div className="flex items-center gap-1.5 rounded-lg bg-th-surface border border-th-border px-2.5 py-1.5">
-      <span className="text-xs font-medium text-th-text-muted">Free Plan</span>
-    </div>
-  );
-}
-
-function StarIcon() {
-  return (
-    <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor" className="text-cyan-500">
-      <path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z" />
-    </svg>
-  );
-}
-
-function ClockIcon({ className }: { className?: string }) {
-  return (
-    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className={className}>
-      <circle cx="12" cy="12" r="10" />
-      <path d="M12 6v6l4 2" strokeLinecap="round" />
-    </svg>
-  );
+  return "Free Plan";
 }

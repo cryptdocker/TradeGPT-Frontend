@@ -1,4 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from "react";
+import { FiSend, FiEdit3, FiX } from "react-icons/fi";
+import { COMPOSER_MAX_HEIGHT_PX } from "@/config/constants";
 
 type Props = {
   disabled: boolean;
@@ -29,7 +31,7 @@ export function ChatComposer({
   useEffect(() => {
     if (!ta.current) return;
     ta.current.style.height = "auto";
-    ta.current.style.height = `${Math.min(ta.current.scrollHeight, 192)}px`;
+    ta.current.style.height = `${Math.min(ta.current.scrollHeight, COMPOSER_MAX_HEIGHT_PX)}px`;
   }, [val, editingHint]);
 
   const submit = useCallback(() => {
@@ -41,23 +43,27 @@ export function ChatComposer({
   }, [val, disabled, onSend, controlled]);
 
   return (
-    <div className="border-t border-th-border bg-th-bg px-3 pb-[max(1.25rem,env(safe-area-inset-bottom))] pt-3 sm:px-4 sm:pb-6">
+    <div className="bg-th-bg p-3">
       <div className="mx-auto max-w-3xl">
         {editingHint && (
-          <div className="mb-2 flex items-center justify-between gap-2 rounded-lg border border-cyan-500/30 bg-cyan-500/10 px-3 py-2 text-xs text-cyan-600 dark:text-cyan-300">
-            <span className="truncate">{editingHint}</span>
+          <div className="mb-2 flex items-center justify-between gap-2 rounded-lg border border-teal-500/30 bg-teal-500/10 px-3 py-2 text-xs text-teal-700 dark:text-teal-300">
+            <span className="inline-flex min-w-0 items-center gap-2">
+              <FiEdit3 aria-hidden className="h-3.5 w-3.5 shrink-0" />
+              <span className="truncate">{editingHint}</span>
+            </span>
             {onCancelEdit && (
               <button
                 type="button"
                 onClick={onCancelEdit}
-                className="shrink-0 rounded px-2 py-1 text-th-text-muted hover:bg-th-surface hover:text-th-text"
+                className="inline-flex shrink-0 items-center gap-1 rounded px-2 py-1 text-th-text-muted hover:bg-th-surface hover:text-th-text"
               >
+                <FiX aria-hidden className="h-3.5 w-3.5" />
                 Cancel
               </button>
             )}
           </div>
         )}
-        <div className="relative flex items-end gap-2 rounded-3xl border border-th-border bg-th-input px-3 py-2 shadow-[0_8px_24px_rgba(15,23,42,0.08)]">
+        <div className="relative flex items-end gap-2 rounded-3xl border border-th-border bg-th-input px-3 py-2 shadow-[0_8px_24px_rgba(13,148,136,0.08)] focus-within:border-teal-500/50 focus-within:ring-2 focus-within:ring-teal-500/20 transition">
           <textarea
             ref={ta}
             rows={1}
@@ -79,31 +85,20 @@ export function ChatComposer({
             onInput={(e) => {
               const el = e.target as HTMLTextAreaElement;
               el.style.height = "auto";
-              el.style.height = `${Math.min(el.scrollHeight, 192)}px`;
+              el.style.height = `${Math.min(el.scrollHeight, COMPOSER_MAX_HEIGHT_PX)}px`;
             }}
           />
           <button
             type="button"
             disabled={disabled || !val.trim()}
             onClick={submit}
-            className="absolute bottom-2 right-2 flex h-9 w-9 items-center justify-center rounded-lg bg-slate-900 text-white transition-opacity hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-40"
+            className="absolute bottom-3 right-3 flex h-9 w-9 items-center justify-center rounded-lg bg-gradient-to-br from-teal-500 to-emerald-600 text-white shadow-teal-glow transition-opacity hover:opacity-95 disabled:cursor-not-allowed disabled:opacity-40 disabled:shadow-none"
             aria-label="Send message"
           >
-            <SendIcon />
+            <FiSend aria-hidden className="h-4 w-4" />
           </button>
         </div>
-        <p className="mt-2 text-center text-xs text-th-text-muted">
-          TradeGPT can make mistakes. Not financial advice.
-        </p>
       </div>
     </div>
-  );
-}
-
-function SendIcon() {
-  return (
-    <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor">
-      <path d="M2.01 21L23 12 2.01 3 2 10l15 2-15 2z" />
-    </svg>
   );
 }

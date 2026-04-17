@@ -1,4 +1,6 @@
+import { FiMenu, FiCpu, FiGlobe } from "react-icons/fi";
 import type { TradeModeId, TradeModeMeta } from "@/lib/chatApi";
+import { ChatModeSelect } from "@/components/chat/ChatModeSelect";
 
 type Props = {
   modes: TradeModeMeta[];
@@ -10,14 +12,6 @@ type Props = {
   /** Shown as a leading control on small viewports (e.g. open chat drawer). */
   onOpenMenu?: () => void;
 };
-
-function MenuIcon() {
-  return (
-    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden>
-      <path d="M4 6h16M4 12h16M4 18h16" strokeLinecap="round" />
-    </svg>
-  );
-}
 
 export function ChatHeader({ modes, mode, onModeChange, title, replyMeta, onOpenMenu }: Props) {
   return (
@@ -31,7 +25,7 @@ export function ChatHeader({ modes, mode, onModeChange, title, replyMeta, onOpen
               className="flex min-h-[44px] min-w-[44px] shrink-0 items-center justify-center rounded-lg p-2.5 text-th-text hover:bg-th-surface md:hidden"
               aria-label="Open menu"
             >
-              <MenuIcon />
+              <FiMenu aria-hidden className="h-5 w-5" />
             </button>
           )}
           <h1 className="min-w-0 flex-1 truncate text-sm font-semibold text-th-text md:max-w-md">
@@ -42,39 +36,21 @@ export function ChatHeader({ modes, mode, onModeChange, title, replyMeta, onOpen
           <label htmlFor="mode-select" className="sr-only">
             Trading mode
           </label>
-          <div className="rounded-xl border border-th-border bg-th-input p-1 shadow-sm" title="Trading mode selector">
-            <select
-              id="mode-select"
-              value={mode}
-              onChange={(e) => onModeChange(e.target.value as TradeModeId)}
-              className="max-w-[min(11rem,42vw)] min-h-[44px] w-full cursor-pointer rounded-lg border-0 bg-th-input px-2 py-2 text-xs text-th-text outline-none focus:ring-2 focus:ring-cyan-500/50 sm:max-w-[200px] sm:min-h-0 sm:px-3 sm:py-1.5 md:max-w-xs md:text-sm"
-            >
-              {modes.map((m) => {
-                const featured =
-                  m.id === "safe_binance_trading_bot" || m.id === "cryptdocker";
-                return (
-                  <option
-                    key={m.id}
-                    value={m.id}
-                    className={
-                      featured
-                        ? "bg-slate-900 font-semibold text-slate-100"
-                        : "bg-th-input text-th-text"
-                    }
-                  >
-                    {featured ? `★ ${m.label}` : m.label}
-                  </option>
-                );
-              })}
-            </select>
+          <div
+            className="flex min-w-0 items-center gap-1.5 rounded-xl border border-teal-500/30 bg-th-input p-1 pl-2 shadow-sm"
+            title="Trading mode selector"
+          >
+            <FiCpu aria-hidden className="h-4 w-4 shrink-0 text-teal-500 dark:text-teal-300" />
+            <ChatModeSelect modes={modes} value={mode} onChange={onModeChange} triggerId="mode-select" />
           </div>
         </div>
       </div>
       {replyMeta && (
-        <div className="border-t border-th-border/60 px-3 py-1.5 text-center text-[10px] text-th-text-muted sm:px-4 sm:text-[11px]">
+        <div className="flex items-center justify-center gap-2 border-t border-th-border/60 px-3 py-1.5 text-center text-[10px] text-th-text-muted sm:px-4 sm:text-[11px]">
           <span className="break-all font-mono text-th-text/80">{replyMeta.model}</span>
           {replyMeta.usedWebSearch && (
-            <span className="ml-2 inline-block rounded bg-cyan-500/15 px-1.5 py-0.5 text-cyan-500">
+            <span className="inline-flex items-center gap-1 rounded bg-teal-500/15 px-1.5 py-0.5 text-teal-600 dark:text-teal-300">
+              <FiGlobe aria-hidden className="h-3 w-3" />
               Web search
             </span>
           )}

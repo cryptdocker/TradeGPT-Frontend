@@ -1,10 +1,12 @@
 import { useCallback, useState } from "react";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
+import { FiCopy, FiEdit2, FiCheck, FiAlertTriangle } from "react-icons/fi";
 import type { TradeModeId, TradeModeMeta } from "@/lib/chatApi";
 import type { Components } from "react-markdown";
 import { pickStarterSuggestions } from "@/lib/suggestedQuestions";
 import { isMongoObjectId } from "@/lib/mongoId";
+import { COPY_FEEDBACK_RESET_MS, FOLLOWUP_STALE_MS } from "@/config/constants";
 
 const MARKDOWN_PLUGINS = [remarkGfm];
 
@@ -22,13 +24,13 @@ const PROSE_CLS = [
   "prose prose-sm max-w-none leading-relaxed dark:prose-invert",
   "prose-headings:text-th-text",
   "prose-p:my-2",
-  "prose-a:text-cyan-600 prose-a:no-underline hover:prose-a:underline dark:prose-a:text-cyan-400",
+  "prose-a:text-teal-600 prose-a:no-underline hover:prose-a:underline dark:prose-a:text-teal-400",
   "prose-strong:text-th-text",
-  "prose-code:rounded prose-code:bg-th-code prose-code:px-1.5 prose-code:py-0.5 prose-code:text-cyan-700 prose-code:before:content-none prose-code:after:content-none dark:prose-code:text-cyan-300",
+  "prose-code:rounded prose-code:bg-th-code prose-code:px-1.5 prose-code:py-0.5 prose-code:text-teal-700 prose-code:before:content-none prose-code:after:content-none dark:prose-code:text-teal-300",
   "prose-pre:rounded-lg prose-pre:bg-th-code prose-pre:p-4",
   "prose-ol:my-2 prose-ul:my-2 prose-li:my-0.5",
   "prose-table:text-sm prose-th:border prose-th:border-th-border prose-th:bg-th-surface prose-th:px-3 prose-th:py-1.5 prose-td:border prose-td:border-th-border prose-td:px-3 prose-td:py-1.5",
-  "prose-blockquote:border-cyan-500 prose-blockquote:text-th-text-muted",
+  "prose-blockquote:border-teal-500 prose-blockquote:text-th-text-muted",
   "prose-hr:border-th-border",
 ].join(" ");
 
@@ -78,7 +80,7 @@ function SuggestionChips({
           key={keySeed ? `${keySeed}:${i}:${q}` : `${i}:${q}`}
           type="button"
           onClick={() => onPick(q)}
-          className="max-w-full rounded-xl border border-th-border-muted bg-th-input px-3 py-2 text-left text-xs text-th-text transition-colors hover:bg-th-input-hover md:text-sm"
+          className="max-w-full rounded-xl border border-th-border-muted bg-th-input px-3 py-2 text-left text-xs text-th-text transition-colors hover:border-teal-500/40 hover:bg-th-input-hover hover:text-teal-700 dark:hover:text-teal-300 md:text-sm"
         >
           {q}
         </button>
@@ -103,22 +105,22 @@ function MessageToolbar({
       <button
         type="button"
         onClick={onCopy}
-        className="rounded p-1.5 text-th-text-muted hover:bg-th-surface hover:text-th-text"
+        className="inline-flex items-center gap-1 rounded p-1.5 text-th-text-muted hover:bg-th-surface hover:text-teal-600 dark:hover:text-teal-300"
         title="Copy"
         aria-label="Copy message"
       >
-        <CopyIcon />
+        {copied ? <FiCheck aria-hidden className="h-4 w-4 text-teal-500" /> : <FiCopy aria-hidden className="h-4 w-4" />}
       </button>
-      {copied && <span className="text-[10px] text-cyan-500">Copied</span>}
+      {copied && <span className="text-[10px] text-teal-600 dark:text-teal-300">Copied</span>}
       {role === "user" && onEdit && (
         <button
           type="button"
           onClick={onEdit}
-          className="rounded p-1.5 text-th-text-muted hover:bg-th-surface hover:text-th-text"
+          className="rounded p-1.5 text-th-text-muted hover:bg-th-surface hover:text-teal-600 dark:hover:text-teal-300"
           title="Edit message"
           aria-label="Edit message"
         >
-          <EditIcon />
+          <FiEdit2 aria-hidden className="h-4 w-4" />
         </button>
       )}
     </div>
@@ -129,11 +131,11 @@ function modeMarkMeta(modeId: TradeModeId, options: TradeModeMeta[]) {
   return options.find((x) => x.id === modeId);
 }
 
-function isOlderThanOneMinute(isoDate?: string): boolean {
+function isFollowUpStale(isoDate?: string): boolean {
   if (!isoDate) return false;
   const ms = Date.parse(isoDate);
   if (Number.isNaN(ms)) return false;
-  return Date.now() - ms >= 60_000;
+  return Date.now() - ms >= FOLLOWUP_STALE_MS;
 }
 
 export function ChatMessageList({
@@ -157,7 +159,10 @@ export function ChatMessageList({
     async (key: string, text: string) => {
       await onCopy(text);
       setCopiedKey(key);
-      window.setTimeout(() => setCopiedKey((k) => (k === key ? null : k)), 2000);
+      window.setTimeout(
+        () => setCopiedKey((k) => (k === key ? null : k)),
+        COPY_FEEDBACK_RESET_MS,
+      );
     },
     [onCopy]
   );
@@ -195,14 +200,14 @@ export function ChatMessageList({
                     {m.askedMode && (
                       <div className="mb-1 flex justify-end">
                         <span
-                          className="max-w-full truncate rounded-lg border border-cyan-500/35 bg-cyan-500/10 px-2 py-0.5 text-[10px] font-medium text-cyan-600 dark:text-cyan-300 sm:text-[11px]"
+                          className="max-w-full truncate rounded-lg border border-teal-500/35 bg-teal-500/10 px-2 py-0.5 text-[10px] font-medium text-teal-700 dark:text-teal-300 sm:text-[11px]"
                           title={modeMarkMeta(m.askedMode, modeOptions)?.label ?? m.askedMode}
                         >
                           {modeMarkMeta(m.askedMode, modeOptions)?.shortLabel ?? m.askedMode}
                         </span>
                       </div>
                     )}
-                    <div className="rounded-2xl border border-th-border/70 bg-th-surface px-4 py-3 text-th-text shadow-sm">
+                    <div className="rounded-2xl border border-teal-500/20 bg-gradient-to-br from-teal-500/10 via-th-surface to-emerald-500/5 px-4 py-3 text-th-text shadow-sm">
                       <p className="whitespace-pre-wrap text-sm leading-relaxed">{m.content}</p>
                     </div>
                     <div className="flex justify-end">
@@ -221,7 +226,7 @@ export function ChatMessageList({
                 </div>
               ) : (
                 <div className="flex gap-2 sm:gap-4">
-                  <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-md bg-cyan-600 text-[10px] font-bold text-white sm:h-8 sm:w-8 sm:text-xs">
+                  <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-md bg-gradient-to-br from-teal-500 to-emerald-600 text-[10px] font-bold text-white shadow-sm sm:h-8 sm:w-8 sm:text-xs">
                     AI
                   </div>
                   <div className="min-w-0 flex-1 text-th-text">
@@ -252,17 +257,23 @@ export function ChatMessageList({
                               />
                             </>
                           ) : followUpStatusByMessageId[m.id]?.status === "withdrawn" ? (
-                            <div className="rounded-lg border border-amber-500/30 bg-amber-500/10 px-3 py-2 text-xs text-amber-700 dark:text-amber-300">
-                              {followUpStatusByMessageId[m.id]?.notice ??
-                                "Suggested questions were automatically withdrawn."}
+                            <div className="flex items-start gap-2 rounded-lg border border-amber-500/30 bg-amber-500/10 px-3 py-2 text-xs text-amber-700 dark:text-amber-300">
+                              <FiAlertTriangle aria-hidden className="mt-0.5 h-3.5 w-3.5 shrink-0" />
+                              <span>
+                                {followUpStatusByMessageId[m.id]?.notice ??
+                                  "Suggested questions were automatically withdrawn."}
+                              </span>
                             </div>
-                          ) : isOlderThanOneMinute(m.createdAt) ? (
-                            <div className="rounded-lg border border-amber-500/30 bg-amber-500/10 px-3 py-2 text-xs text-amber-700 dark:text-amber-300">
-                              Suggested questions were automatically withdrawn after 1 minute because generation did not complete.
+                          ) : isFollowUpStale(m.createdAt) ? (
+                            <div className="flex items-start gap-2 rounded-lg border border-amber-500/30 bg-amber-500/10 px-3 py-2 text-xs text-amber-700 dark:text-amber-300">
+                              <FiAlertTriangle aria-hidden className="mt-0.5 h-3.5 w-3.5 shrink-0" />
+                              <span>
+                                Suggested questions were automatically withdrawn after 1 minute because generation did not complete.
+                              </span>
                             </div>
                           ) : (
                             <div className="flex items-center gap-2 text-xs text-th-text-muted">
-                              <span className="inline-block h-3 w-3 animate-spin rounded-full border-2 border-th-border-muted border-t-cyan-500" />
+                              <span className="inline-block h-3 w-3 animate-spin rounded-full border-2 border-th-border-muted border-t-teal-500" />
                               Generating suggestions…
                             </div>
                           )}
@@ -275,7 +286,7 @@ export function ChatMessageList({
           ))}
           {streamingContent && (
             <li className="group flex gap-2 sm:gap-4">
-              <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-md bg-cyan-600 text-[10px] font-bold text-white sm:h-8 sm:w-8 sm:text-xs">
+              <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-md bg-gradient-to-br from-teal-500 to-emerald-600 text-[10px] font-bold text-white shadow-sm sm:h-8 sm:w-8 sm:text-xs">
                 AI
               </div>
               <div className="min-w-0 flex-1 text-th-text">
@@ -284,19 +295,23 @@ export function ChatMessageList({
                     {streamingContent}
                   </ReactMarkdown>
                 </div>
-                <span className="inline-block h-4 w-1 animate-pulse bg-th-text" aria-hidden />
+                <span className="inline-block h-4 w-1 animate-pulse bg-teal-500" aria-hidden />
                 <div className="mt-1">
                   <button
                     type="button"
                     onClick={() => handleCopy("stream", streamingContent)}
-                    className="rounded p-1.5 text-th-text-muted hover:bg-th-surface hover:text-th-text"
+                    className="inline-flex items-center gap-1 rounded p-1.5 text-th-text-muted hover:bg-th-surface hover:text-teal-600 dark:hover:text-teal-300"
                     title="Copy"
                     aria-label="Copy streaming reply"
                   >
-                    <CopyIcon />
+                    {copiedKey === "stream" ? (
+                      <FiCheck aria-hidden className="h-4 w-4 text-teal-500" />
+                    ) : (
+                      <FiCopy aria-hidden className="h-4 w-4" />
+                    )}
                   </button>
                   {copiedKey === "stream" && (
-                    <span className="ml-1 text-[10px] text-cyan-500">Copied</span>
+                    <span className="ml-1 text-[10px] text-teal-600 dark:text-teal-300">Copied</span>
                   )}
                 </div>
               </div>
@@ -305,23 +320,5 @@ export function ChatMessageList({
         </ul>
       </div>
     </div>
-  );
-}
-
-function CopyIcon() {
-  return (
-    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-      <rect x="9" y="9" width="13" height="13" rx="2" />
-      <path d="M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2h9a2 2 0 012 2v1" />
-    </svg>
-  );
-}
-
-function EditIcon() {
-  return (
-    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-      <path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7" />
-      <path d="M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4 9.5-9.5z" />
-    </svg>
   );
 }

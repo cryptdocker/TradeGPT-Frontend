@@ -16,10 +16,14 @@ import {
   type AuthUser,
   type SubscriptionInfo,
 } from "@/lib/api";
-
-const STORAGE_KEY = "tradegpt_token";
-const STORAGE_USER = "tradegpt_user";
-const STORAGE_SUB = "tradegpt_subscription";
+import {
+  STORAGE_KEYS,
+  readJson,
+  readString,
+  removeKey,
+  writeJson,
+  writeString,
+} from "@/config/storage";
 
 type AuthContextValue = {
   user: AuthUser | null;
@@ -41,26 +45,6 @@ type AuthContextValue = {
 
 const AuthContext = createContext<AuthContextValue | null>(null);
 
-function readStoredUser(): AuthUser | null {
-  try {
-    const raw = localStorage.getItem(STORAGE_USER);
-    if (!raw) return null;
-    return JSON.parse(raw) as AuthUser;
-  } catch {
-    return null;
-  }
-}
-
-function readStoredSub(): SubscriptionInfo | null {
-  try {
-    const raw = localStorage.getItem(STORAGE_SUB);
-    if (!raw) return null;
-    return JSON.parse(raw) as SubscriptionInfo;
-  } catch {
-    return null;
-  }
-}
-
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<AuthUser | null>(null);
   const [token, setToken] = useState<string | null>(null);
@@ -68,9 +52,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    const t = localStorage.getItem(STORAGE_KEY);
-    const u = readStoredUser();
-    const s = readStoredSub();
+    const t = readString(STORAGE_KEYS.authToken);
+    const u = readJson<AuthUser>(STORAGE_KEYS.authUser);
+    const s = readJson<SubscriptionInfo>(STORAGE_KEYS.subscription);
     if (t && u) {
       setToken(t);
       setUser(u);
@@ -80,14 +64,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, []);
 
   const persistSub = useCallback((s: SubscriptionInfo) => {
-    localStorage.setItem(STORAGE_SUB, JSON.stringify(s));
+    writeJson(STORAGE_KEYS.subscription, s);
     setSubscription(s);
   }, []);
 
   const persist = useCallback(
     (t: string, u: AuthUser, s?: SubscriptionInfo) => {
-      localStorage.setItem(STORAGE_KEY, t);
-      localStorage.setItem(STORAGE_USER, JSON.stringify(u));
+      writeString(STORAGE_KEYS.authToken, t);
+      writeJson(STORAGE_KEYS.authUser, u);
       setToken(t);
       setUser(u);
       if (s) persistSub(s);
@@ -96,7 +80,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   );
 
   const refreshSubscription = useCallback(async () => {
-    const currentToken = localStorage.getItem(STORAGE_KEY);
+    const currentToken = readString(STORAGE_KEYS.authToken);
     if (!currentToken) return;
     try {
       const sub = await apiGetSubscription(currentToken);
@@ -153,9 +137,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, []);
 
   const logout = useCallback(() => {
-    localStorage.removeItem(STORAGE_KEY);
-    localStorage.removeItem(STORAGE_USER);
-    localStorage.removeItem(STORAGE_SUB);
+    removeKey(STORAGE_KEYS.authToken);
+    removeKey(STORAGE_KEYS.authUser);
+    removeKey(STORAGE_KEYS.subscription);
     setToken(null);
     setUser(null);
     setSubscription(null);
