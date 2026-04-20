@@ -9,6 +9,7 @@ const NETWORK_ISSUE_MESSAGE =
   "Network issue: We couldn't reach the server. Please check your internet connection and try again.";
 const SERVICE_ISSUE_MESSAGE =
   "Something went wrong. Please try again in a moment.";
+export const SUPPORT_TEAM_URL = "https://www.cryptdocker.com/support";
 const SUPPORT_CONTACT_MESSAGE =
   "We couldn't complete your request right now. Please contact our support team.";
 

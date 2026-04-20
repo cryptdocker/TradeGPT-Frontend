@@ -21,6 +21,7 @@ import {
   type PaymentTokenId,
 } from "@/lib/api";
 import { getDisplayErrorMessage } from "@/lib/apiError";
+import { InlineSupportErrorText } from "@/components/common/InlineSupportErrorText";
 import { DEFAULT_PRO_PRICE_USD } from "@/config/app";
 import {
   COPY_FEEDBACK_RESET_MS,
@@ -176,7 +177,9 @@ export function PaymentCheckout({ token, onSuccess, onCancel }: Props) {
         <div className="flex h-12 w-12 items-center justify-center rounded-full bg-red-500/15 text-red-500">
           <FiXCircle aria-hidden className="h-6 w-6" />
         </div>
-        <p className="text-sm text-red-500">{error}</p>
+        <p className="text-sm text-red-500">
+          {error && <InlineSupportErrorText message={error} />}
+        </p>
         <div className="flex gap-3">
           <button
             type="button"

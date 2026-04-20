@@ -28,6 +28,7 @@ import {
   modalPanelTransition,
 } from "@/config/motion";
 import { getDisplayErrorMessage, toUserFriendlyErrorMessage } from "@/lib/apiError";
+import { InlineSupportErrorText } from "@/components/common/InlineSupportErrorText";
 
 async function copyToClipboard(text: string): Promise<void> {
   try {
@@ -515,7 +516,7 @@ export function TradeGPTDashboard() {
 
         {loadError && (
           <div className="shrink-0 border-b border-red-500/30 bg-red-500/10 px-4 py-2 text-center text-xs text-red-500">
-            {loadError}
+            <InlineSupportErrorText message={loadError} />
           </div>
         )}
 

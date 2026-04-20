@@ -2,6 +2,7 @@ import { useEffect, useId, useState } from "react";
 import { FiLogIn, FiUserPlus, FiX, FiAlertCircle } from "react-icons/fi";
 import { useAuth } from "@/context/AuthContext";
 import { getDisplayErrorMessage } from "@/lib/apiError";
+import { InlineSupportErrorText } from "@/components/common/InlineSupportErrorText";
 
 type Props = {
   open: boolean;
@@ -107,7 +108,9 @@ export function SignInDialog({ open, onClose, onOpenSignUp }: Props) {
               role="alert"
             >
               <FiAlertCircle aria-hidden className="mt-0.5 h-4 w-4 shrink-0" />
-              <span>{error}</span>
+              <span>
+                <InlineSupportErrorText message={error} />
+              </span>
             </p>
           )}
 

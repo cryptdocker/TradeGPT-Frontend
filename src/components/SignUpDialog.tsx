@@ -14,6 +14,7 @@ import { useAuth } from "@/context/AuthContext";
 import { evaluatePasswordStrength, meetsMinimumPassword } from "@/lib/passwordStrength";
 import { PasswordStrengthIndicator } from "@/components/PasswordStrengthIndicator";
 import { getDisplayErrorMessage } from "@/lib/apiError";
+import { InlineSupportErrorText } from "@/components/common/InlineSupportErrorText";
 import {
   EMAIL_VERIFICATION_CODE_LENGTH,
   VERIFICATION_RESEND_COOLDOWN_SECONDS,
@@ -260,7 +261,9 @@ export function SignUpDialog({ open, onClose, onOpenSignIn }: Props) {
                   role="alert"
                 >
                   <FiAlertCircle aria-hidden className="mt-0.5 h-4 w-4 shrink-0" />
-                  <span>{error}</span>
+                  <span>
+                    <InlineSupportErrorText message={error} />
+                  </span>
                 </p>
               )}
 
@@ -349,7 +352,9 @@ export function SignUpDialog({ open, onClose, onOpenSignIn }: Props) {
                   role="alert"
                 >
                   <FiAlertCircle aria-hidden className="mt-0.5 h-4 w-4 shrink-0" />
-                  <span>{error}</span>
+                  <span>
+                    <InlineSupportErrorText message={error} />
+                  </span>
                 </p>
               )}
 

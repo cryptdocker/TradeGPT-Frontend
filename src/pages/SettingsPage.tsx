@@ -30,6 +30,7 @@ import { buildChatHistoryExportText, deleteAllConversations } from "@/lib/chatAp
 import { evaluatePasswordStrength, meetsMinimumPassword } from "@/lib/passwordStrength";
 import { DEFAULT_PRO_PRICE_USD, FREE_TRIAL_DAYS } from "@/config/app";
 import { getDisplayErrorMessage } from "@/lib/apiError";
+import { InlineSupportErrorText } from "@/components/common/InlineSupportErrorText";
 
 export type SettingsSectionId = "general" | "subscription" | "notifications" | "data" | "account";
 
@@ -520,7 +521,7 @@ export function SettingsView({ variant, section, onSectionChange, onClose }: Set
                   )}
                   {notifError && (
                     <p className="mb-4 rounded-lg border border-red-900/50 bg-red-950/30 px-3 py-2 text-sm text-red-300">
-                      {notifError}
+                      <InlineSupportErrorText message={notifError} />
                     </p>
                   )}
                   <SettingsRow
@@ -558,12 +559,12 @@ export function SettingsView({ variant, section, onSectionChange, onClose }: Set
                 <div className="mt-6">
                   {exportError && (
                     <p className="mb-4 rounded-lg border border-red-900/50 bg-red-950/30 px-3 py-2 text-sm text-red-300">
-                      {exportError}
+                      <InlineSupportErrorText message={exportError} />
                     </p>
                   )}
                   {deleteError && (
                     <p className="mb-4 rounded-lg border border-red-900/50 bg-red-950/30 px-3 py-2 text-sm text-red-300">
-                      {deleteError}
+                      <InlineSupportErrorText message={deleteError} />
                     </p>
                   )}
                   {deleteSuccess && (
@@ -790,7 +791,7 @@ export function SettingsView({ variant, section, onSectionChange, onClose }: Set
               )}
               {passwordError && (
                 <p className="rounded-lg border border-red-900/50 bg-red-950/30 px-3 py-2 text-sm text-red-300">
-                  {passwordError}
+                  <InlineSupportErrorText message={passwordError} />
                 </p>
               )}
             </div>
