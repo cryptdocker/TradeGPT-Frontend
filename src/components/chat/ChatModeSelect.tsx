@@ -1,9 +1,9 @@
 import { useEffect, useId, useRef, useState } from "react";
 import type { KeyboardEvent as ReactKeyboardEvent } from "react";
-import { AnimatePresence, motion, useReducedMotion } from "framer-motion";
+import { motion, useReducedMotion } from "framer-motion";
 import { FiChevronDown } from "react-icons/fi";
 import type { TradeModeId, TradeModeMeta } from "@/lib/chatApi";
-import { popoverExitTransition, popoverTransition } from "@/config/motion";
+import { popoverTransition } from "@/config/motion";
 
 function isFeaturedMode(id: TradeModeId) {
   return id === "safe_binance_trading_bot" || id === "cryptdocker";
@@ -148,54 +148,47 @@ export function ChatModeSelect({ modes, value, onChange, triggerId = "mode-selec
         />
       </button>
 
-      <AnimatePresence>
-        {open && modes.length > 0 && (
-          <motion.ul
-            key={listboxId}
-            ref={listRef}
-            id={listboxId}
-            role="listbox"
-            initial={instant ? false : { opacity: 0, y: -8, scale: 0.96 }}
-            animate={{ opacity: 1, y: 0, scale: 1 }}
-            exit={
-              instant
-                ? { opacity: 0, transition: popoverExitTransition(true) }
-                : { opacity: 0, y: -4, scale: 0.98, transition: popoverExitTransition(false) }
-            }
-            transition={popoverTransition(reduceMotion)}
-            className="absolute right-0 top-full z-50 mt-1 max-h-[min(18rem,55vh)] w-[min(18rem,calc(100vw-2rem))] origin-top overflow-auto rounded-xl border border-th-border bg-th-surface py-1 shadow-lg ring-1 ring-black/5 dark:ring-white/10"
-          >
-            {modes.map((m, i) => {
-              const selected = m.id === value;
-              const highlighted = i === highlightIndex;
-              const featured = isFeaturedMode(m.id);
-              return (
-                <li key={m.id} role="presentation" className="px-1">
-                  <button
-                    type="button"
-                    id={`${listboxId}-opt-${m.id}`}
-                    role="option"
-                    data-index={i}
-                    aria-selected={selected}
-                    tabIndex={-1}
-                    className={`flex w-full rounded-lg px-2.5 py-2 text-left text-xs sm:text-sm ${
-                      featured ? "font-semibold" : "font-normal"
-                    } ${
-                      highlighted
-                        ? "bg-teal-500/15 text-th-text"
-                        : "text-th-text hover:bg-th-input"
-                    } ${selected && !highlighted ? "text-teal-700 dark:text-teal-300" : ""}`}
-                    onMouseEnter={() => setHighlightIndex(i)}
-                    onClick={() => selectIndex(i)}
-                  >
-                    <span className="truncate">{modeDisplayLabel(m)}</span>
-                  </button>
-                </li>
-              );
-            })}
-          </motion.ul>
-        )}
-      </AnimatePresence>
+      {open && modes.length > 0 && (
+        <motion.ul
+          key={listboxId}
+          ref={listRef}
+          id={listboxId}
+          role="listbox"
+          initial={instant ? false : { opacity: 0, y: -8, scale: 0.96 }}
+          animate={{ opacity: 1, y: 0, scale: 1 }}
+          transition={popoverTransition(reduceMotion)}
+          className="absolute right-0 top-full z-50 mt-1 max-h-[min(18rem,55vh)] w-[min(18rem,calc(100vw-2rem))] origin-top overflow-auto rounded-xl border border-th-border bg-th-surface py-1 shadow-lg ring-1 ring-black/5 dark:ring-white/10"
+        >
+          {modes.map((m, i) => {
+            const selected = m.id === value;
+            const highlighted = i === highlightIndex;
+            const featured = isFeaturedMode(m.id);
+            return (
+              <li key={m.id} role="presentation" className="px-1">
+                <button
+                  type="button"
+                  id={`${listboxId}-opt-${m.id}`}
+                  role="option"
+                  data-index={i}
+                  aria-selected={selected}
+                  tabIndex={-1}
+                  className={`flex w-full rounded-lg px-2.5 py-2 text-left text-xs sm:text-sm ${
+                    featured ? "font-semibold" : "font-normal"
+                  } ${
+                    highlighted
+                      ? "bg-teal-500/15 text-th-text"
+                      : "text-th-text hover:bg-th-input"
+                  } ${selected && !highlighted ? "text-teal-700 dark:text-teal-300" : ""}`}
+                  onMouseEnter={() => setHighlightIndex(i)}
+                  onClick={() => selectIndex(i)}
+                >
+                  <span className="truncate">{modeDisplayLabel(m)}</span>
+                </button>
+              </li>
+            );
+          })}
+        </motion.ul>
+      )}
     </div>
   );
 }
