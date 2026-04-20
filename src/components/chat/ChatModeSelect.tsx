@@ -1,4 +1,4 @@
-import { useEffect, useId, useRef, useState } from "react";
+import { useEffect, useId, useMemo, useRef, useState } from "react";
 import type { KeyboardEvent as ReactKeyboardEvent } from "react";
 import { motion, useReducedMotion } from "framer-motion";
 import { FiChevronDown } from "react-icons/fi";
@@ -7,6 +7,10 @@ import { popoverTransition } from "@/config/motion";
 
 function isFeaturedMode(id: TradeModeId) {
   return id === "safe_binance_trading_bot" || id === "cryptdocker";
+}
+
+function isComingSoonMode(id: TradeModeId) {
+  return id === "safe_binance_trading_bot";
 }
 
 function modeDisplayLabel(m: TradeModeMeta) {
@@ -31,7 +35,19 @@ export function ChatModeSelect({ modes, value, onChange, triggerId = "mode-selec
   const [highlightIndex, setHighlightIndex] = useState(0);
   const instant = Boolean(reduceMotion);
 
-  const valueIndex = Math.max(0, modes.findIndex((m) => m.id === value));
+  const orderedModes = useMemo(() => {
+    const next = [...modes];
+    const safeIdx = next.findIndex((m) => m.id === "safe_binance_trading_bot");
+    const cryptIdx = next.findIndex((m) => m.id === "cryptdocker");
+
+    // Keep backend order for everything else; only swap these two entries.
+    if (safeIdx >= 0 && cryptIdx >= 0) {
+      [next[safeIdx], next[cryptIdx]] = [next[cryptIdx], next[safeIdx]];
+    }
+    return next;
+  }, [modes]);
+
+  const valueIndex = Math.max(0, orderedModes.findIndex((m) => m.id === value));
 
   useEffect(() => {
     if (!open) return;
@@ -56,11 +72,12 @@ export function ChatModeSelect({ modes, value, onChange, triggerId = "mode-selec
     el?.scrollIntoView({ block: "nearest" });
   }, [open, highlightIndex]);
 
-  const clampIndex = (i: number) => Math.max(0, Math.min(modes.length - 1, i));
+  const clampIndex = (i: number) => Math.max(0, Math.min(orderedModes.length - 1, i));
 
   const selectIndex = (i: number) => {
-    const m = modes[clampIndex(i)];
+    const m = orderedModes[clampIndex(i)];
     if (!m) return;
+    if (isComingSoonMode(m.id)) return;
     onChange(m.id);
     setOpen(false);
   };
@@ -71,12 +88,12 @@ export function ChatModeSelect({ modes, value, onChange, triggerId = "mode-selec
   };
 
   const onTriggerKeyDown = (e: ReactKeyboardEvent<HTMLButtonElement>) => {
-    if (modes.length === 0) return;
+    if (orderedModes.length === 0) return;
 
     if (!open) {
       if (e.key === "ArrowDown") {
         e.preventDefault();
-        openWithHighlight(Math.min(modes.length - 1, valueIndex + 1));
+        openWithHighlight(Math.min(orderedModes.length - 1, valueIndex + 1));
         return;
       }
       if (e.key === "ArrowUp") {
@@ -109,7 +126,7 @@ export function ChatModeSelect({ modes, value, onChange, triggerId = "mode-selec
     }
     if (e.key === "End") {
       e.preventDefault();
-      setHighlightIndex(modes.length - 1);
+      setHighlightIndex(orderedModes.length - 1);
       return;
     }
     if (e.key === "Enter" || e.key === " ") {
@@ -118,9 +135,9 @@ export function ChatModeSelect({ modes, value, onChange, triggerId = "mode-selec
     }
   };
 
-  const current = modes[valueIndex];
+  const current = orderedModes[valueIndex];
   const triggerLabel = current ? modeDisplayLabel(current) : "Trading mode";
-  const activeOption = modes[highlightIndex];
+  const activeOption = orderedModes[highlightIndex];
   const activeOptionId = activeOption ? `${listboxId}-opt-${activeOption.id}` : undefined;
 
   return (
@@ -148,7 +165,7 @@ export function ChatModeSelect({ modes, value, onChange, triggerId = "mode-selec
         />
       </button>
 
-      {open && modes.length > 0 && (
+      {open && orderedModes.length > 0 && (
         <motion.ul
           key={listboxId}
           ref={listRef}
@@ -159,18 +176,20 @@ export function ChatModeSelect({ modes, value, onChange, triggerId = "mode-selec
           transition={popoverTransition(reduceMotion)}
           className="absolute right-0 top-full z-50 mt-1 max-h-[min(18rem,55vh)] w-[min(18rem,calc(100vw-2rem))] origin-top overflow-auto rounded-xl border border-th-border bg-th-surface py-1 shadow-lg ring-1 ring-black/5 dark:ring-white/10"
         >
-          {modes.map((m, i) => {
+          {orderedModes.map((m, i) => {
             const selected = m.id === value;
             const highlighted = i === highlightIndex;
             const featured = isFeaturedMode(m.id);
+            const disabled = isComingSoonMode(m.id);
             return (
-              <li key={m.id} role="presentation" className="px-1">
+              <li key={m.id} role="presentation" className="group relative px-1">
                 <button
                   type="button"
                   id={`${listboxId}-opt-${m.id}`}
                   role="option"
                   data-index={i}
                   aria-selected={selected}
+                  aria-disabled={disabled}
                   tabIndex={-1}
                   className={`flex w-full rounded-lg px-2.5 py-2 text-left text-xs sm:text-sm ${
                     featured ? "font-semibold" : "font-normal"
@@ -178,12 +197,20 @@ export function ChatModeSelect({ modes, value, onChange, triggerId = "mode-selec
                     highlighted
                       ? "bg-teal-500/15 text-th-text"
                       : "text-th-text hover:bg-th-input"
-                  } ${selected && !highlighted ? "text-teal-700 dark:text-teal-300" : ""}`}
+                  } ${selected && !highlighted ? "text-teal-700 dark:text-teal-300" : ""} ${
+                    disabled ? "cursor-not-allowed opacity-60" : ""
+                  }`}
+                  title={disabled ? "This product is coming soon." : undefined}
                   onMouseEnter={() => setHighlightIndex(i)}
                   onClick={() => selectIndex(i)}
                 >
                   <span className="truncate">{modeDisplayLabel(m)}</span>
                 </button>
+                {disabled && (
+                  <div className="pointer-events-none absolute left-2 right-2 top-full z-10 mt-1 hidden rounded-md border border-th-border bg-th-surface px-2 py-1 text-[11px] text-th-text-muted shadow-md group-hover:block group-focus-within:block">
+                    This product is coming soon.
+                  </div>
+                )}
               </li>
             );
           })}
