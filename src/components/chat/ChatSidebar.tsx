@@ -159,7 +159,7 @@ export function ChatSidebar({
               <button
                 type="button"
                 onClick={() => onSelect(c.id)}
-                className={`w-full truncate rounded-lg px-3 py-2.5 text-left text-sm transition-colors ${
+                className={`w-full truncate rounded-lg px-3 py-2.5 pr-11 text-left text-sm transition-colors ${
                   c.id === activeId
                     ? "bg-teal-500/15 text-th-text shadow-sm ring-1 ring-teal-500/30 dark:bg-teal-400/15 dark:ring-teal-400/25"
                     : "text-th-text/90 hover:bg-th-input"
@@ -173,7 +173,7 @@ export function ChatSidebar({
                   e.stopPropagation();
                   onDelete(c.id);
                 }}
-                className="absolute right-1 top-1/2 flex -translate-y-1/2 rounded-md p-2 text-th-text-muted opacity-100 hover:bg-th-input hover:text-red-500 md:opacity-0 md:group-hover:opacity-100"
+                className="absolute right-1 top-1/2 z-10 flex -translate-y-1/2 rounded-md p-2 text-th-text-muted opacity-100 hover:bg-th-input hover:text-red-500 md:pointer-events-none md:opacity-0 md:group-hover:pointer-events-auto md:group-hover:opacity-100 md:group-focus-within:pointer-events-auto md:group-focus-within:opacity-100"
                 title="Delete chat"
                 aria-label="Delete chat"
               >
