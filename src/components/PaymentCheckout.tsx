@@ -20,6 +20,7 @@ import {
   type PaymentNetworkId,
   type PaymentTokenId,
 } from "@/lib/api";
+import { getDisplayErrorMessage } from "@/lib/apiError";
 import { DEFAULT_PRO_PRICE_USD } from "@/config/app";
 import {
   COPY_FEEDBACK_RESET_MS,
@@ -88,7 +89,7 @@ export function PaymentCheckout({ token, onSuccess, onCancel }: Props) {
       setPhase(data.status === "confirming" ? "confirming" : "pay");
       setSecondsLeft(Math.max(0, Math.floor((new Date(data.expiresAt).getTime() - Date.now()) / 1000)));
     } catch (e) {
-      setError(e instanceof Error ? e.message : "Failed to start checkout");
+      setError(getDisplayErrorMessage(e, "Failed to start checkout"));
       setPhase("error");
     }
   }, [token, selectedNetwork, selectedToken, onSuccess]);

@@ -27,6 +27,7 @@ import {
   modalPanelExitTransition,
   modalPanelTransition,
 } from "@/config/motion";
+import { getDisplayErrorMessage, toUserFriendlyErrorMessage } from "@/lib/apiError";
 
 async function copyToClipboard(text: string): Promise<void> {
   try {
@@ -205,7 +206,7 @@ export function TradeGPTDashboard() {
         }
       } catch (e) {
         if (!cancelled) {
-          setLoadError(e instanceof Error ? e.message : "Failed to load");
+          setLoadError(getDisplayErrorMessage(e, "Failed to load"));
         }
       } finally {
         if (!cancelled) setBootstrapped(true);
@@ -239,7 +240,7 @@ export function TradeGPTDashboard() {
       await refreshList();
       await loadConversation(created.id);
     } catch (e) {
-      setLoadError(e instanceof Error ? e.message : "Failed to create chat");
+      setLoadError(getDisplayErrorMessage(e, "Failed to create chat"));
       try {
         await refreshList();
       } catch {
@@ -260,7 +261,7 @@ export function TradeGPTDashboard() {
         setFollowUpStatusByMessageId({});
         await loadConversation(id);
       } catch (e) {
-        setLoadError(e instanceof Error ? e.message : "Failed to open chat");
+        setLoadError(getDisplayErrorMessage(e, "Failed to open chat"));
       }
     },
     [activeId, loadConversation]
@@ -318,7 +319,7 @@ export function TradeGPTDashboard() {
           }
         }
       } catch (e) {
-        setLoadError(e instanceof Error ? e.message : "Failed to delete");
+        setLoadError(getDisplayErrorMessage(e, "Failed to delete"));
       }
     },
     [token, activeId, refreshList, loadConversation, mode]
@@ -334,7 +335,7 @@ export function TradeGPTDashboard() {
           prev.map((c) => (c.id === activeId ? { ...c, mode: next } : c))
         );
       } catch (e) {
-        setLoadError(e instanceof Error ? e.message : "Failed to update mode");
+        setLoadError(getDisplayErrorMessage(e, "Failed to update mode"));
       }
     },
     [token, activeId]
@@ -413,14 +414,16 @@ export function TradeGPTDashboard() {
             }
           }
           if (ev.type === "error") {
-            setLoadError(ev.message);
+            setLoadError(
+              toUserFriendlyErrorMessage(ev.message, "We couldn't complete that request.")
+            );
           }
         });
 
         await loadConversation(activeId);
         setStreaming("");
       } catch (e) {
-        setLoadError(e instanceof Error ? e.message : "Send failed");
+        setLoadError(getDisplayErrorMessage(e, "Send failed"));
         setStreaming("");
         if (token && activeId) {
           try {

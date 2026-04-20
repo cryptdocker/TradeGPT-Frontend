@@ -1,6 +1,7 @@
 import { useEffect, useId, useState } from "react";
 import { FiLogIn, FiUserPlus, FiX, FiAlertCircle } from "react-icons/fi";
 import { useAuth } from "@/context/AuthContext";
+import { getDisplayErrorMessage } from "@/lib/apiError";
 
 type Props = {
   open: boolean;
@@ -42,7 +43,7 @@ export function SignInDialog({ open, onClose, onOpenSignUp }: Props) {
       await login(email.trim(), password);
       onClose();
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Sign in failed");
+      setError(getDisplayErrorMessage(err, "Sign in failed"));
     } finally {
       setSubmitting(false);
     }

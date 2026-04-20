@@ -13,6 +13,7 @@ import {
 import { useAuth } from "@/context/AuthContext";
 import { evaluatePasswordStrength, meetsMinimumPassword } from "@/lib/passwordStrength";
 import { PasswordStrengthIndicator } from "@/components/PasswordStrengthIndicator";
+import { getDisplayErrorMessage } from "@/lib/apiError";
 import {
   EMAIL_VERIFICATION_CODE_LENGTH,
   VERIFICATION_RESEND_COOLDOWN_SECONDS,
@@ -142,7 +143,7 @@ export function SignUpDialog({ open, onClose, onOpenSignIn }: Props) {
       setResendCooldown(VERIFICATION_RESEND_COOLDOWN_SECONDS);
       setStep("verify");
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Sign up failed");
+      setError(getDisplayErrorMessage(err, "Sign up failed"));
     } finally {
       setSubmitting(false);
     }
@@ -161,7 +162,7 @@ export function SignUpDialog({ open, onClose, onOpenSignIn }: Props) {
       await verifyEmail(email.trim(), code);
       onClose();
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Verification failed");
+      setError(getDisplayErrorMessage(err, "Verification failed"));
     } finally {
       setSubmitting(false);
     }
@@ -175,7 +176,7 @@ export function SignUpDialog({ open, onClose, onOpenSignIn }: Props) {
       setDigits([...EMPTY_CODE_DIGITS]);
       inputRefs.current[0]?.focus();
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Failed to resend code");
+      setError(getDisplayErrorMessage(err, "Failed to resend code"));
     }
   }
 

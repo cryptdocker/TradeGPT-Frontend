@@ -1,4 +1,5 @@
 import { API_BASE } from "@/config/env";
+import { getApiErrorMessage } from "@/lib/apiError";
 
 export type AuthUser = { id: string; email: string };
 
@@ -22,7 +23,7 @@ export async function apiRegister(body: {
     body: JSON.stringify(body),
   });
   const data = await res.json().catch(() => ({}));
-  if (!res.ok) throw new Error(data.error ?? "Registration failed");
+  if (!res.ok) throw new Error(getApiErrorMessage(data, "Unable to create your account."));
   return data;
 }
 
@@ -36,7 +37,7 @@ export async function apiVerifyEmail(body: {
     body: JSON.stringify(body),
   });
   const data = await res.json().catch(() => ({}));
-  if (!res.ok) throw new Error(data.error ?? "Verification failed");
+  if (!res.ok) throw new Error(getApiErrorMessage(data, "Unable to verify your email."));
   return data;
 }
 
@@ -49,7 +50,7 @@ export async function apiResendCode(body: {
     body: JSON.stringify(body),
   });
   const data = await res.json().catch(() => ({}));
-  if (!res.ok) throw new Error(data.error ?? "Failed to resend code");
+  if (!res.ok) throw new Error(getApiErrorMessage(data, "Unable to resend the verification code."));
   return data;
 }
 
@@ -63,7 +64,7 @@ export async function apiLogin(body: {
     body: JSON.stringify(body),
   });
   const data = await res.json().catch(() => ({}));
-  if (!res.ok) throw new Error(data.error ?? "Login failed");
+  if (!res.ok) throw new Error(getApiErrorMessage(data, "Unable to sign you in."));
   return data;
 }
 
@@ -80,7 +81,7 @@ export async function apiChangePassword(
     body: JSON.stringify(body),
   });
   const data = await res.json().catch(() => ({}));
-  if (!res.ok) throw new Error(data.error ?? "Failed to change password");
+  if (!res.ok) throw new Error(getApiErrorMessage(data, "Unable to change your password."));
   return data;
 }
 
@@ -89,7 +90,7 @@ export async function apiGetSubscription(token: string): Promise<SubscriptionInf
     headers: { Authorization: `Bearer ${token}` },
   });
   const data = await res.json().catch(() => ({}));
-  if (!res.ok) throw new Error(data.error ?? "Failed to fetch subscription");
+  if (!res.ok) throw new Error(getApiErrorMessage(data, "Unable to load your subscription details."));
   return data.subscription;
 }
 
@@ -128,7 +129,7 @@ export type PaymentStatusInfo = {
 export async function apiFetchPaymentNetworks(): Promise<{ networks: NetworkOption[]; price: number }> {
   const res = await fetch(`${API_BASE}/api/payment/networks`);
   const data = await res.json().catch(() => ({}));
-  if (!res.ok) throw new Error(data.error ?? "Failed to fetch networks");
+  if (!res.ok) throw new Error(getApiErrorMessage(data, "Unable to load payment options."));
   return data;
 }
 
@@ -150,7 +151,7 @@ export async function apiCreateCheckout(
     body: JSON.stringify({ network, token: payToken }),
   });
   const data = await res.json().catch(() => ({}));
-  if (!res.ok) throw new Error(data.error ?? "Failed to create checkout");
+  if (!res.ok) throw new Error(getApiErrorMessage(data, "Unable to start checkout right now."));
   return data;
 }
 
@@ -159,7 +160,7 @@ export async function apiGetPaymentStatus(token: string, paymentId: string): Pro
     headers: { Authorization: `Bearer ${token}` },
   });
   const data = await res.json().catch(() => ({}));
-  if (!res.ok) throw new Error(data.error ?? "Failed to check payment status");
+  if (!res.ok) throw new Error(getApiErrorMessage(data, "Unable to check payment status right now."));
   return data;
 }
 
@@ -175,7 +176,7 @@ export async function apiCheckPaymentLogs(token: string, paymentId: string): Pro
     headers: { Authorization: `Bearer ${token}` },
   });
   const data = await res.json().catch(() => ({}));
-  if (!res.ok) throw new Error(data.error ?? "Failed to check payment logs");
+  if (!res.ok) throw new Error(getApiErrorMessage(data, "Unable to verify payment right now."));
   return data;
 }
 
@@ -191,7 +192,7 @@ export async function apiGetNotificationPrefs(token: string): Promise<Notificati
     headers: { Authorization: `Bearer ${token}` },
   });
   const data = await res.json().catch(() => ({}));
-  if (!res.ok) throw new Error(data.error ?? "Failed to fetch notification preferences");
+  if (!res.ok) throw new Error(getApiErrorMessage(data, "Unable to load notification preferences."));
   return data.notifications;
 }
 
@@ -208,6 +209,6 @@ export async function apiUpdateNotificationPrefs(
     body: JSON.stringify(prefs),
   });
   const data = await res.json().catch(() => ({}));
-  if (!res.ok) throw new Error(data.error ?? "Failed to update notification preferences");
+  if (!res.ok) throw new Error(getApiErrorMessage(data, "Unable to update notification preferences."));
   return data.notifications;
 }

@@ -1,4 +1,5 @@
 import { API_BASE } from "@/config/env";
+import { getApiErrorMessage } from "@/lib/apiError";
 
 export type TradeModeId =
   | "market_analysis"
@@ -21,7 +22,7 @@ export type TradeModeMeta = {
 export async function fetchModes(): Promise<TradeModeMeta[]> {
   const res = await fetch(`${API_BASE}/api/chat/modes`);
   const data = await res.json().catch(() => ({}));
-  if (!res.ok) throw new Error(data.error ?? "Failed to load modes");
+  if (!res.ok) throw new Error(getApiErrorMessage(data, "Unable to load chat modes."));
   return data.modes as TradeModeMeta[];
 }
 
@@ -37,7 +38,7 @@ export async function listConversations(token: string) {
     headers: authHeaders(token),
   });
   const data = await res.json().catch(() => ({}));
-  if (!res.ok) throw new Error(data.error ?? "Failed to list chats");
+  if (!res.ok) throw new Error(getApiErrorMessage(data, "Unable to load your chat history."));
   return data.conversations as {
     id: string;
     title: string;
@@ -54,7 +55,7 @@ export async function createConversation(token: string, mode: TradeModeId) {
     body: JSON.stringify({ mode }),
   });
   const data = await res.json().catch(() => ({}));
-  if (!res.ok) throw new Error(data.error ?? "Failed to create chat");
+  if (!res.ok) throw new Error(getApiErrorMessage(data, "Unable to start a new chat right now."));
   return data as { id: string; title: string; mode: TradeModeId };
 }
 
@@ -63,7 +64,7 @@ export async function getConversation(token: string, id: string) {
     headers: authHeaders(token),
   });
   const data = await res.json().catch(() => ({}));
-  if (!res.ok) throw new Error(data.error ?? "Failed to load chat");
+  if (!res.ok) throw new Error(getApiErrorMessage(data, "Unable to open this chat right now."));
   return data as {
     id: string;
     title: string;
@@ -131,7 +132,7 @@ export async function patchConversationMode(
     body: JSON.stringify({ mode }),
   });
   const data = await res.json().catch(() => ({}));
-  if (!res.ok) throw new Error(data.error ?? "Failed to update mode");
+  if (!res.ok) throw new Error(getApiErrorMessage(data, "Unable to update chat mode."));
   return data as { id: string; mode: TradeModeId };
 }
 
@@ -142,7 +143,7 @@ export async function deleteConversation(token: string, id: string) {
   });
   if (!res.ok) {
     const data = await res.json().catch(() => ({}));
-    throw new Error(data.error ?? "Failed to delete chat");
+    throw new Error(getApiErrorMessage(data, "Unable to delete this chat."));
   }
 }
 
@@ -155,7 +156,7 @@ export async function deleteAllConversations(token: string): Promise<{
     headers: { Authorization: `Bearer ${token}` },
   });
   const data = await res.json().catch(() => ({}));
-  if (!res.ok) throw new Error(data.error ?? "Failed to delete all chats");
+  if (!res.ok) throw new Error(getApiErrorMessage(data, "Unable to delete your chat history."));
   return {
     deletedConversations: Number(data.deletedConversations ?? 0),
     deletedMessages: Number(data.deletedMessages ?? 0),
@@ -176,7 +177,7 @@ export async function rollbackFromMessage(
     }
   );
   const data = await res.json().catch(() => ({}));
-  if (!res.ok) throw new Error(data.error ?? "Failed to edit message");
+  if (!res.ok) throw new Error(getApiErrorMessage(data, "Unable to edit this message."));
   return data as { ok: boolean; removed: number };
 }
 
@@ -219,7 +220,7 @@ export async function streamAssistantReply(
 
   if (!res.ok) {
     const data = await res.json().catch(() => ({}));
-    throw new Error(data.error ?? "Failed to send message");
+    throw new Error(getApiErrorMessage(data, "Unable to send your message right now."));
   }
 
   const reader = res.body?.getReader();

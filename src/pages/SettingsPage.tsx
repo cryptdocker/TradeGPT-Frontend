@@ -29,6 +29,7 @@ import {
 import { buildChatHistoryExportText, deleteAllConversations } from "@/lib/chatApi";
 import { evaluatePasswordStrength, meetsMinimumPassword } from "@/lib/passwordStrength";
 import { DEFAULT_PRO_PRICE_USD, FREE_TRIAL_DAYS } from "@/config/app";
+import { getDisplayErrorMessage } from "@/lib/apiError";
 
 export type SettingsSectionId = "general" | "subscription" | "notifications" | "data" | "account";
 
@@ -131,7 +132,7 @@ export function SettingsView({ variant, section, onSectionChange, onClose }: Set
     setNotifLoading(true);
     apiGetNotificationPrefs(token)
       .then(setNotifPrefs)
-      .catch((e) => setNotifError(e instanceof Error ? e.message : "Failed to load"))
+      .catch((e) => setNotifError(getDisplayErrorMessage(e, "Failed to load")))
       .finally(() => setNotifLoading(false));
   }, [section, token]);
 
@@ -145,7 +146,7 @@ export function SettingsView({ variant, section, onSectionChange, onClose }: Set
         setNotifError(null);
       } catch (e) {
         setNotifPrefs((prev) => (prev ? { ...prev, [field]: !value } : prev));
-        setNotifError(e instanceof Error ? e.message : "Failed to update");
+        setNotifError(getDisplayErrorMessage(e, "Failed to update"));
       }
     },
     [token],
@@ -197,7 +198,7 @@ export function SettingsView({ variant, section, onSectionChange, onClose }: Set
       a.remove();
       URL.revokeObjectURL(url);
     } catch (e) {
-      setExportError(e instanceof Error ? e.message : "Export failed");
+      setExportError(getDisplayErrorMessage(e, "Export failed"));
     } finally {
       setExportLoading(false);
     }
@@ -215,7 +216,7 @@ export function SettingsView({ variant, section, onSectionChange, onClose }: Set
       );
       setDeleteConfirmOpen(false);
     } catch (e) {
-      setDeleteError(e instanceof Error ? e.message : "Delete failed");
+      setDeleteError(getDisplayErrorMessage(e, "Delete failed"));
     } finally {
       setDeleteLoading(false);
     }
@@ -262,7 +263,7 @@ export function SettingsView({ variant, section, onSectionChange, onClose }: Set
       setPasswordModalOpen(false);
       resetPasswordState();
     } catch (e) {
-      setPasswordError(e instanceof Error ? e.message : "Failed to change password");
+      setPasswordError(getDisplayErrorMessage(e, "Failed to change password"));
     } finally {
       setPasswordSubmitting(false);
     }
