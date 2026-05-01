@@ -1,7 +1,12 @@
 import { API_BASE } from "@/config/env";
 import { getApiErrorMessage } from "@/lib/apiError";
 
-export type AuthUser = { id: string; email: string };
+export type AuthUser = {
+  uuid: string;
+  email: string;
+  fullName?: string;
+  avatar?: string;
+};
 
 export type SubscriptionInfo = {
   plan: "free" | "pro";
@@ -65,6 +70,41 @@ export async function apiLogin(body: {
   });
   const data = await res.json().catch(() => ({}));
   if (!res.ok) throw new Error(getApiErrorMessage(data, "Unable to sign you in."));
+  return data;
+}
+
+export async function apiGoogleLogin(body: {
+  idToken: string;
+}): Promise<{ token: string; user: AuthUser; subscription?: SubscriptionInfo }> {
+  const res = await fetch(`${API_BASE}/api/auth/google`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(body),
+  });
+  const data = await res.json().catch(() => ({}));
+  if (!res.ok) throw new Error(getApiErrorMessage(data, "Google sign-in failed."));
+  return data;
+}
+
+export async function apiGoogleCodeLogin(body: {
+  code: string;
+}): Promise<{ token: string; user: AuthUser; subscription?: SubscriptionInfo }> {
+  const res = await fetch(`${API_BASE}/api/auth/google/code`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(body),
+  });
+  const data = await res.json().catch(() => ({}));
+  if (!res.ok) throw new Error(getApiErrorMessage(data, "Google sign-in failed."));
+  return data;
+}
+
+export async function apiMe(token: string): Promise<{ user: AuthUser; subscription?: SubscriptionInfo }> {
+  const res = await fetch(`${API_BASE}/api/auth/me`, {
+    headers: { Authorization: `Bearer ${token}` },
+  });
+  const data = await res.json().catch(() => ({}));
+  if (!res.ok) throw new Error(getApiErrorMessage(data, "Session expired."));
   return data;
 }
 

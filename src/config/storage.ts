@@ -1,25 +1,27 @@
 /**
  * Typed wrapper around window.localStorage.
  *
- * All keys the client persists live in `STORAGE_KEYS` so a grep for one place
- * reveals everything we keep on the device, and every key is namespaced by
- * `APP_STORAGE_PREFIX` to avoid collisions with other apps on the same origin.
+ * Auth tokens are stored using the SHARED key (`cryptdocker_auth_v1`) which is
+ * identical to the main CryptDocker site — signing in on either site
+ * automatically authenticates the other (assuming same origin / domain).
+ *
+ * Non-auth keys are still namespaced with `APP_STORAGE_PREFIX`.
  */
-import { APP_STORAGE_PREFIX } from "@/config/app";
+import { APP_STORAGE_PREFIX, SHARED_AUTH_STORAGE_KEY } from "@/config/app";
 
 const withPrefix = (name: string): string => `${APP_STORAGE_PREFIX}${name}`;
 
 export const STORAGE_KEYS = {
-  authToken: withPrefix("token"),
-  authUser: withPrefix("user"),
+  /** Shared auth blob (token + user) — same key as main site */
+  sharedAuth: SHARED_AUTH_STORAGE_KEY,
   subscription: withPrefix("subscription"),
   theme: withPrefix("theme"),
 } as const;
 
-export type StorageKey = (typeof STORAGE_KEYS)[keyof typeof STORAGE_KEYS];
+export type StorageKey = string;
 
 /** Reads a raw string. Returns null on missing keys or storage failures. */
-export function readString(key: StorageKey): string | null {
+export function readString(key: string): string | null {
   try {
     return localStorage.getItem(key);
   } catch {
@@ -28,7 +30,7 @@ export function readString(key: StorageKey): string | null {
 }
 
 /** Writes a raw string. Silently ignores quota / private-mode errors. */
-export function writeString(key: StorageKey, value: string): void {
+export function writeString(key: string, value: string): void {
   try {
     localStorage.setItem(key, value);
   } catch {
@@ -36,7 +38,7 @@ export function writeString(key: StorageKey, value: string): void {
   }
 }
 
-export function removeKey(key: StorageKey): void {
+export function removeKey(key: string): void {
   try {
     localStorage.removeItem(key);
   } catch {
@@ -45,7 +47,7 @@ export function removeKey(key: StorageKey): void {
 }
 
 /** Reads and JSON-parses a value. Returns null on missing / malformed data. */
-export function readJson<T>(key: StorageKey): T | null {
+export function readJson<T>(key: string): T | null {
   const raw = readString(key);
   if (raw === null) return null;
   try {
@@ -56,7 +58,7 @@ export function readJson<T>(key: StorageKey): T | null {
 }
 
 /** JSON-stringifies and writes a value. */
-export function writeJson<T>(key: StorageKey, value: T): void {
+export function writeJson<T>(key: string, value: T): void {
   try {
     writeString(key, JSON.stringify(value));
   } catch {

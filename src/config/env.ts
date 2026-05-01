@@ -5,8 +5,8 @@
  * we have one place to validate, normalise and document runtime configuration.
  */
 
-function readEnv(name: keyof ImportMetaEnv): string {
-  const raw = import.meta.env[name];
+function readEnv(name: string): string {
+  const raw = (import.meta.env as Record<string, string | undefined>)[name];
   return typeof raw === "string" ? raw.trim() : "";
 }
 
@@ -15,6 +15,9 @@ function readEnv(name: keyof ImportMetaEnv): string {
  * Empty string means "same origin", which is the intended dev fallback.
  */
 export const API_BASE: string = readEnv("VITE_API_URL").replace(/\/+$/, "");
+
+/** Google OAuth Client ID (shared with main site). */
+export const GOOGLE_CLIENT_ID: string = readEnv("VITE_GOOGLE_CLIENT_ID");
 
 /** True while running under `vite` dev server. */
 export const IS_DEV: boolean = import.meta.env.DEV;

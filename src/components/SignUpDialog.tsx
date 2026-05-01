@@ -15,6 +15,7 @@ import { evaluatePasswordStrength, meetsMinimumPassword } from "@/lib/passwordSt
 import { PasswordStrengthIndicator } from "@/components/PasswordStrengthIndicator";
 import { getDisplayErrorMessage } from "@/lib/apiError";
 import { InlineSupportErrorText } from "@/components/common/InlineSupportErrorText";
+import { GoogleSSOButton } from "@/components/GoogleSSOButton";
 import {
   EMAIL_VERIFICATION_CODE_LENGTH,
   VERIFICATION_RESEND_COOLDOWN_SECONDS,
@@ -34,7 +35,7 @@ type Props = {
 type Step = "credentials" | "verify";
 
 export function SignUpDialog({ open, onClose, onOpenSignIn }: Props) {
-  const { register, verifyEmail, resendCode } = useAuth();
+  const { register, verifyEmail, resendCode, loginWithGoogleCode } = useAuth();
   const titleId = useId();
 
   const [step, setStep] = useState<Step>("credentials");
@@ -204,7 +205,36 @@ export function SignUpDialog({ open, onClose, onOpenSignIn }: Props) {
             </h2>
             <p className="mt-1 text-sm text-th-text-muted">Join TradeGPT with a secure password.</p>
 
-            <form onSubmit={handleCredentials} className="mt-6 space-y-4">
+            <div className="mt-6">
+              <GoogleSSOButton
+                label="Sign up with Google"
+                disabled={submitting}
+                onCode={async (code) => {
+                  setError(null);
+                  setSubmitting(true);
+                  try {
+                    await loginWithGoogleCode(code);
+                    onClose();
+                  } catch (err) {
+                    setError(getDisplayErrorMessage(err, "Google sign-in failed"));
+                  } finally {
+                    setSubmitting(false);
+                  }
+                }}
+                onError={(msg) => setError(msg)}
+              />
+            </div>
+
+            <div className="relative my-5">
+              <div className="absolute inset-0 flex items-center">
+                <div className="w-full border-t border-th-border" />
+              </div>
+              <div className="relative flex justify-center text-xs">
+                <span className="bg-th-surface px-2 text-th-text-muted">or</span>
+              </div>
+            </div>
+
+            <form onSubmit={handleCredentials} className="space-y-4">
               <div>
                 <label htmlFor="su-email" className="mb-1 block text-xs font-semibold text-th-text-muted">
                   Email

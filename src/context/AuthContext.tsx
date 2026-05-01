@@ -9,7 +9,9 @@ import {
 } from "react";
 import {
   apiGetSubscription,
+  apiGoogleCodeLogin,
   apiLogin,
+  apiMe,
   apiRegister,
   apiResendCode,
   apiVerifyEmail,
@@ -19,11 +21,15 @@ import {
 import {
   STORAGE_KEYS,
   readJson,
-  readString,
   removeKey,
   writeJson,
-  writeString,
 } from "@/config/storage";
+import {
+  getCrossDomainAuth,
+  setCrossDomainAuth,
+  clearCrossDomainAuth,
+  type CrossDomainAuthPayload,
+} from "@/config/crossDomainAuth";
 
 type AuthContextValue = {
   user: AuthUser | null;
@@ -32,6 +38,7 @@ type AuthContextValue = {
   isAuthenticated: boolean;
   loading: boolean;
   login: (email: string, password: string) => Promise<void>;
+  loginWithGoogleCode: (code: string) => Promise<void>;
   register: (
     email: string,
     password: string,
@@ -45,6 +52,24 @@ type AuthContextValue = {
 
 const AuthContext = createContext<AuthContextValue | null>(null);
 
+/**
+ * Load auth from localStorage first; if not found, check cross-domain cookie.
+ * This allows SSO between cryptdocker.com and trade.cryptdocker.com.
+ */
+function loadInitialAuth(): CrossDomainAuthPayload | null {
+  try {
+    const raw = localStorage.getItem(STORAGE_KEYS.sharedAuth);
+    if (raw) {
+      const parsed = JSON.parse(raw) as Partial<CrossDomainAuthPayload>;
+      if (parsed?.token && parsed?.user?.email) {
+        return parsed as CrossDomainAuthPayload;
+      }
+    }
+  } catch { /* ignore */ }
+
+  return getCrossDomainAuth();
+}
+
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<AuthUser | null>(null);
   const [token, setToken] = useState<string | null>(null);
@@ -52,13 +77,34 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    const t = readString(STORAGE_KEYS.authToken);
-    const u = readJson<AuthUser>(STORAGE_KEYS.authUser);
+    const initial = loadInitialAuth();
     const s = readJson<SubscriptionInfo>(STORAGE_KEYS.subscription);
-    if (t && u) {
-      setToken(t);
-      setUser(u);
+
+    if (initial) {
+      setToken(initial.token);
+      setUser(initial.user);
       if (s) setSubscription(s);
+
+      writeJson(STORAGE_KEYS.sharedAuth, initial);
+      setCrossDomainAuth(initial);
+
+      apiMe(initial.token)
+        .then(({ user: freshUser, subscription: freshSub }) => {
+          setUser(freshUser);
+          const payload = { user: freshUser, token: initial.token };
+          writeJson(STORAGE_KEYS.sharedAuth, payload);
+          setCrossDomainAuth(payload);
+          if (freshSub) {
+            writeJson(STORAGE_KEYS.subscription, freshSub);
+            setSubscription(freshSub);
+          }
+        })
+        .catch(() => {
+          setToken(null);
+          setUser(null);
+          removeKey(STORAGE_KEYS.sharedAuth);
+          clearCrossDomainAuth();
+        });
     }
     setLoading(false);
   }, []);
@@ -70,8 +116,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const persist = useCallback(
     (t: string, u: AuthUser, s?: SubscriptionInfo) => {
-      writeString(STORAGE_KEYS.authToken, t);
-      writeJson(STORAGE_KEYS.authUser, u);
+      const payload = { user: u, token: t };
+      writeJson(STORAGE_KEYS.sharedAuth, payload);
+      setCrossDomainAuth(payload);
       setToken(t);
       setUser(u);
       if (s) persistSub(s);
@@ -80,10 +127,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   );
 
   const refreshSubscription = useCallback(async () => {
-    const currentToken = readString(STORAGE_KEYS.authToken);
-    if (!currentToken) return;
+    const initial = loadInitialAuth();
+    if (!initial?.token) return;
     try {
-      const sub = await apiGetSubscription(currentToken);
+      const sub = await apiGetSubscription(initial.token);
       persistSub(sub);
     } catch {
       // silently ignore — stale cache is acceptable
@@ -97,6 +144,20 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const login = useCallback(
     async (email: string, password: string) => {
       const { token: t, user: u, subscription: s } = await apiLogin({ email, password });
+      persist(t, u, s ?? undefined);
+      if (!s) {
+        try {
+          const sub = await apiGetSubscription(t);
+          persistSub(sub);
+        } catch { /* ignore */ }
+      }
+    },
+    [persist, persistSub]
+  );
+
+  const loginWithGoogleCode = useCallback(
+    async (code: string) => {
+      const { token: t, user: u, subscription: s } = await apiGoogleCodeLogin({ code });
       persist(t, u, s ?? undefined);
       if (!s) {
         try {
@@ -137,9 +198,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, []);
 
   const logout = useCallback(() => {
-    removeKey(STORAGE_KEYS.authToken);
-    removeKey(STORAGE_KEYS.authUser);
+    removeKey(STORAGE_KEYS.sharedAuth);
     removeKey(STORAGE_KEYS.subscription);
+    clearCrossDomainAuth();
     setToken(null);
     setUser(null);
     setSubscription(null);
@@ -153,13 +214,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       isAuthenticated: Boolean(token && user),
       loading,
       login,
+      loginWithGoogleCode,
       register,
       verifyEmail,
       resendCode,
       refreshSubscription,
       logout,
     }),
-    [user, token, subscription, loading, login, register, verifyEmail, resendCode, refreshSubscription, logout]
+    [user, token, subscription, loading, login, loginWithGoogleCode, register, verifyEmail, resendCode, refreshSubscription, logout]
   );
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

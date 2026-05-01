@@ -3,6 +3,7 @@ import { FiLogIn, FiUserPlus, FiX, FiAlertCircle } from "react-icons/fi";
 import { useAuth } from "@/context/AuthContext";
 import { getDisplayErrorMessage } from "@/lib/apiError";
 import { InlineSupportErrorText } from "@/components/common/InlineSupportErrorText";
+import { GoogleSSOButton } from "@/components/GoogleSSOButton";
 
 type Props = {
   open: boolean;
@@ -11,7 +12,7 @@ type Props = {
 };
 
 export function SignInDialog({ open, onClose, onOpenSignUp }: Props) {
-  const { login } = useAuth();
+  const { login, loginWithGoogleCode } = useAuth();
   const titleId = useId();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -71,7 +72,35 @@ export function SignInDialog({ open, onClose, onOpenSignUp }: Props) {
         </h2>
         <p className="mt-1 text-sm text-th-text-muted">Welcome back to TradeGPT.</p>
 
-        <form onSubmit={handleSubmit} className="mt-6 space-y-4">
+        <div className="mt-6">
+          <GoogleSSOButton
+            disabled={submitting}
+            onCode={async (code) => {
+              setError(null);
+              setSubmitting(true);
+              try {
+                await loginWithGoogleCode(code);
+                onClose();
+              } catch (err) {
+                setError(getDisplayErrorMessage(err, "Google sign-in failed"));
+              } finally {
+                setSubmitting(false);
+              }
+            }}
+            onError={(msg) => setError(msg)}
+          />
+        </div>
+
+        <div className="relative my-5">
+          <div className="absolute inset-0 flex items-center">
+            <div className="w-full border-t border-th-border" />
+          </div>
+          <div className="relative flex justify-center text-xs">
+            <span className="bg-th-surface px-2 text-th-text-muted">or</span>
+          </div>
+        </div>
+
+        <form onSubmit={handleSubmit} className="space-y-4">
           <div>
             <label htmlFor="si-email" className="mb-1 block text-xs font-semibold text-th-text-muted">
               Email
